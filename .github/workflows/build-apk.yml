@@ -28,53 +28,28 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Build web game
+      - name: Build Web App
         run: npm run build
 
-      - name: Add Android platform
+      - name: Add Android Platform
+        run: npx cap add android
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build Debug APK
         run: |
-          npx cap add android
-          npx cap sync android
+          cd android
+          ./gradlew assembleDebug
 
-      - name: Generate app icon from logo
-        continue-on-error: true
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y librsvg2-bin
-          rsvg-convert -w 1024 -h 1024 assets/icon.svg -o assets/icon.png
-          npx --yes @capacitor/assets generate --android --iconBackgroundColor '#14213d' --iconBackgroundColorDark '#14213d'
-
-      - name: Force landscape and fullscreen
-        run: |
-          MANIFEST=android/app/src/main/AndroidManifest.xml
-          sed -i 's/<activity/<activity android:screenOrientation="sensorLandscape"/' "$MANIFEST"
-          STYLES=android/app/src/main/res/values/styles.xml
-          sed -i '/<style name="AppTheme.NoActionBar"/a \        <item name="android:windowFullscreen">true</item>\n        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>' "$STYLES"
-          cat "$STYLES"
-
-      - name: Build debug APK
-        working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-
-      - name: Rename APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk PetualanganSantay.apk
-
-      - name: Upload APK artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PetualanganSantay-APK
-          path: PetualanganSantay.apk
-
-      - name: Publish release
-        if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.run_number }}
-          name: Petualangan Santay v${{ github.run_number }}
-          files: PetualanganSantay.apk
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
