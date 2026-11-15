@@ -60,11 +60,16 @@
     <!-- ONLINE -->
     <div id="sOnline" class="screen shade">
       <button id="onBack" class="btn back">‹ Kembali</button>
-      <div class="center">
-        <h2 class="pageTitle">Mabar Online</h2>
-        <div class="cards">
-          <button id="onCreate" class="bigCard"><span>🏕️</span><b>Buat Room</b><i>Jadi host, undang teman</i></button>
-          <button id="onFind" class="bigCard"><span>🔍</span><b>Cari Room</b><i>Masuk dengan nama &amp; password</i></button>
+      <div class="onWrap">
+        <div class="onLeft">
+          <h2 class="pageTitle">🌐 Mabar Online</h2>
+          <button id="onOpen" class="bigRow"><span>🌍</span><div><b>Open World</b><i>Dunia bebas, ketemu pemain lain otomatis</i></div></button>
+          <button id="onCreate" class="bigRow"><span>🏕️</span><div><b>Buat Room</b><i>Kosongkan password = tampil di daftar global</i></div></button>
+          <button id="onFind" class="bigRow"><span>🔒</span><div><b>Cari Room Private</b><i>Masuk dengan nama &amp; password</i></div></button>
+        </div>
+        <div class="onRight">
+          <div class="listHead"><b>Room Global</b><span id="onStatus">Menghubungkan...</span></div>
+          <div id="roomList" class="roomList"></div>
         </div>
       </div>
     </div>
@@ -75,7 +80,8 @@
         <div class="formCard">
           <h2>Buat Room</h2>
           <input id="crRoom" maxlength="16" placeholder="Nama room" autocomplete="off" />
-          <input id="crPw" maxlength="16" placeholder="Password" autocomplete="off" />
+          <input id="crPw" maxlength="16" placeholder="Password (opsional)" autocomplete="off" />
+          <small class="hint">Tanpa password = publik, semua orang bisa masuk dari daftar.</small>
           <button id="crGo" class="btn big">Buat</button>
           <div id="crMsg" class="msg"></div>
         </div>
@@ -86,7 +92,7 @@
       <button id="fnBack" class="btn back">‹ Kembali</button>
       <div class="center">
         <div class="formCard">
-          <h2>Cari Room</h2>
+          <h2>Cari Room Private</h2>
           <input id="fnRoom" maxlength="16" placeholder="Nama room" autocomplete="off" />
           <input id="fnPw" maxlength="16" placeholder="Password" autocomplete="off" />
           <button id="fnGo" class="btn big">Masuk</button>
@@ -124,6 +130,12 @@
         <div class="row"><label>FPS</label>
           <div class="seg"><button id="fps30">30</button><button id="fps60">60</button><button id="fps120">120</button></div>
         </div>
+        <div class="row"><label>Musik</label>
+          <input id="musRange" type="range" min="0" max="1" step="0.05" value="0.6" />
+        </div>
+        <div class="row"><label>Efek Suara</label>
+          <input id="sfxRange" type="range" min="0" max="1" step="0.05" value="0.8" />
+        </div>
         <div class="row"><label>Sensitivitas</label>
           <input id="sensRange" type="range" min="0.4" max="2.2" step="0.1" value="1" />
         </div>
@@ -143,7 +155,9 @@
         <button id="btnBag" class="iconBtn pe">🎒</button>
         <button id="btnPause" class="iconBtn pe">⏸</button>
       </div>
+      <div id="quest" class="quest"><span id="questTxt"></span></div>
       <div class="crosshair"></div>
+      <div id="target" class="target"><div id="targetName"></div><div class="tbar"><i id="targetFill"></i></div></div>
       <div id="hurt" class="hurt"></div>
       <div id="toasts" class="toasts"></div>
 

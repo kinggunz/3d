@@ -4,6 +4,7 @@ import { genHeights, makeTerrain, makeWater, makeSky, makeNature, HALF } from '.
 import { Animals } from './animals.js';
 import { buildChar, SKINS } from './chars.js';
 import { T } from './textures.js';
+import { Audio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 export const SAVE_KEY = 'ps_save_v1';
@@ -153,6 +154,14 @@ export class Game {
     this.running = false;
     this.sprinting = false;
     this.seed = opts.seed || 1;
+    this.stats = { chop: 0, mine: 0, built: 0, api: 0, hunt: 0, cook: 0, bed: 0, sleep: 0 };
+    this.quest = 0;
+    this.chips = [];
+    this.tgtT = 0;
+    this.lastPick = 0;
+    this.wasWater = false;
+    this.fireT = 0;
+    this.stateTimer = null;
   }
 
   /* ================= LOAD ================= */
@@ -171,7 +180,7 @@ export class Game {
       ['Menerbitkan matahari...', () => { this.sky = makeSky(this.scene); this.pieceGroup = new THREE.Group(); this.scene.add(this.pieceGroup); }],
       ['Menanam hutan...', () => { this.nature = makeNature(this.hf, this.seed, this.scene); }],
       ['Memanggil hewan...', () => { this.animals = new Animals(this.hf, this.seed, this.scene, ultra); }],
-      ['Menyiapkan tangan...', () => { this.makeHands(); this.makeLights(); }],
+      ['Menyiapkan tangan...', () => { this.makeHands(); this.makeLights(); this.makeChips(); }],
       ['Memuat dunia...', () => { this.restore(); }],
       ['Menyusun grafik...', () => { this.applySettings(); this.r.compile(this.scene, this.cam); }],
     ];
@@ -194,6 +203,8 @@ export class Game {
       p.hp = s.p.hp; p.hunger = s.p.hunger; p.thirst = s.p.thirst;
       p.x = s.p.x; p.z = s.p.z; p.y = s.p.y; p.yaw = s.p.yaw || 0; p.pitch = s.p.pitch || 0;
       p.spawn = s.p.spawn || p.spawn;
+      if (s.stats) Object.assign(this.stats, s.stats);
+      this.quest = s.quest || 0;
       for (const q of s.pieces || []) this.addPiece(q[0], q[1], q[2], q[3], q[4]);
       this.nature.killIdx(s.dead || []);
     } else {
@@ -292,6 +303,102 @@ export class Game {
     if (this.online) $('pauseSave').style.display = 'none';
     else $('pauseSave').style.display = '';
     this.toast('Selamat datang, ' + (this.o.name || 'Santay') + '!');
+    this.updateQuest(true);
+    Audio.music('game');
+    Audio.ambient(true);
+    if (this.net) this.net.send({ t: 'req' });
+  }
+
+  /* ================= MISI (gaya Minicraft) ================= */
+  questList() {
+    const st = this.stats, inv = this.p.inv;
+    return [
+      { t: 'Tebang 3 pohon (tahan ✊ di dekat pohon)', ok: () => st.chop >= 3 },
+      { t: 'Kumpulkan batu dari 2 batu besar', ok: () => st.mine >= 2 },
+      { t: 'Buka 🎒 lalu buat Kapak', ok: () => inv.kapak > 0 },
+      { t: 'Tekan 🏗️ dan bangun 4 bagian rumah', ok: () => st.built >= 4 },
+      { t: 'Bangun Api Unggun 🔥', ok: () => st.api >= 1 },
+      { t: 'Berburu 1 hewan (kelinci/rusa/ikan)', ok: () => st.hunt >= 1 },
+      { t: 'Masak daging di dekat api (tombol 🔥)', ok: () => st.cook >= 1 },
+      { t: 'Bangun Kasur 🛏️', ok: () => st.bed >= 1 },
+      { t: 'Tidur di kasur saat malam 😴', ok: () => st.sleep >= 1 },
+    ];
+  }
+
+  updateQuest(force) {
+    const q = this.questList();
+    let changed = false;
+    while (this.quest < q.length && q[this.quest].ok()) {
+      this.quest++;
+      changed = true;
+      this.toast('✅ Misi selesai!');
+      Audio.sfx('quest');
+      this.p.hunger = Math.min(100, this.p.hunger + 8);
+    }
+    if (!changed && !force) return;
+    const el = $('questTxt');
+    if (this.quest >= q.length) el.textContent = '🏆 Semua misi selesai! Jelajahi & bangun bebas.';
+    else el.textContent = `📌 Misi ${this.quest + 1}/${q.length}: ${q[this.quest].t}`;
+  }
+
+  /* ================= PARTIKEL ================= */
+  makeChips() {
+    const geo = new THREE.BoxGeometry(0.09, 0.09, 0.09);
+    for (let i = 0; i < 28; i++) {
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      m.visible = false;
+      this.scene.add(m);
+      this.chips.push({ m, vx: 0, vy: 0, vz: 0, life: 0 });
+    }
+  }
+
+  burst(x, y, z, color, n = 7) {
+    let k = 0;
+    for (const c of this.chips) {
+      if (c.life > 0) continue;
+      c.life = 0.55 + Math.random() * 0.3;
+      c.m.visible = true;
+      c.m.position.set(x, y, z);
+      c.m.material.color.setHex(color);
+      c.vx = (Math.random() - 0.5) * 3.2;
+      c.vy = 1.5 + Math.random() * 2.5;
+      c.vz = (Math.random() - 0.5) * 3.2;
+      if (++k >= n) break;
+    }
+  }
+
+  updateChips(dt) {
+    for (const c of this.chips) {
+      if (c.life <= 0) continue;
+      c.life -= dt;
+      c.vy -= 12 * dt;
+      c.m.position.x += c.vx * dt;
+      c.m.position.y += c.vy * dt;
+      c.m.position.z += c.vz * dt;
+      if (c.life <= 0) c.m.visible = false;
+    }
+  }
+
+  /* ================= TARGET (label di tengah layar) ================= */
+  updateTarget() {
+    const box = $('target');
+    if (this.build || this.paused || this.dead) { box.classList.remove('show'); return; }
+    const tg = this.findTarget(3.6);
+    if (!tg) { box.classList.remove('show'); this.tgt = null; return; }
+    this.tgt = tg;
+    let name, hp, max;
+    if (tg.kind === 'node') {
+      const n = tg.n;
+      name = n.type === 'tree' ? (n.kind === 'palm' ? '🌴 Pohon Kelapa' : '🌲 Pohon') : n.type === 'rock' ? '🪨 Batu' : '🫐 Semak Buah';
+      hp = n.hp; max = n.max;
+    } else {
+      const a = tg.a;
+      name = { rabbit: '🐇 Kelinci', deer: '🦌 Rusa', wolf: '🐺 Serigala', fish: '🐟 Ikan' }[a.type];
+      hp = a.hp; max = a.def.hp;
+    }
+    $('targetName').textContent = name + '  ·  tahan ✊';
+    $('targetFill').style.width = clamp((hp / max) * 100, 0, 100) + '%';
+    box.classList.add('show');
   }
 
   bindInput() {
@@ -419,6 +526,8 @@ export class Game {
   give(item, n) {
     this.p.inv[item] = (this.p.inv[item] || 0) + n;
     this.toast(`+${n} ${ITEMS[item]}`);
+    const now = performance.now();
+    if (now - this.lastPick > 120) { Audio.sfx('pickup'); this.lastPick = now; }
     this.renderBag();
     this.updateBuildAfford();
   }
@@ -463,6 +572,8 @@ export class Game {
         this.pay(CRAFT[k].cost);
         this.p.inv[k] = 1;
         this.toast(CRAFT[k].n + ' dibuat!');
+        Audio.sfx('craft');
+        this.updateQuest();
         this.updateHeld();
         this.renderBag();
       });
@@ -675,6 +786,7 @@ export class Game {
       this.renderBag();
       this.updateBuildAfford();
       this.toast(BUILD[p.k].n + ' dibongkar');
+      Audio.sfx('break');
       if (this.net) this.net.send({ t: 'd', k: p.k, x: p.x, y: p.y, z: p.z, r: p.r });
       this.swing = 0.01;
       return;
@@ -688,6 +800,11 @@ export class Game {
     if (!p) return;
     this.pay(BUILD[this.sel].cost);
     this.swing = 0.01;
+    Audio.sfx('place');
+    this.stats.built++;
+    if (this.sel === 'api') this.stats.api++;
+    if (this.sel === 'kasur') this.stats.bed++;
+    this.updateQuest();
     if (this.net) this.net.send({ t: 'b', k: this.sel, x: pl.x, y: pl.y, z: pl.z, r: pl.r });
   }
 
@@ -764,6 +881,8 @@ export class Game {
     const gT2 = this.hf.sample(p.x, p.z);
     const g2 = this.groundAt(p.x, p.z, p.y);
     const swim2 = gT2 < -0.55 && g2 <= gT2 + 0.01;
+    if (swim2 && !this.wasWater) Audio.sfx('splash');
+    this.wasWater = swim2;
     this.inWater = swim2;
     if (swim2) {
       p.vy = 0;
@@ -771,14 +890,17 @@ export class Game {
       this.onGround = false;
       this.jumpReq = false;
     } else {
-      if (this.jumpReq && this.onGround && !locked) { p.vy = 7.6; this.onGround = false; }
+      if (this.jumpReq && this.onGround && !locked) { p.vy = 7.6; this.onGround = false; Audio.sfx('jump'); }
       this.jumpReq = false;
       p.vy -= 22 * dt;
       p.y += p.vy * dt;
       if (p.y <= g2) { p.y = g2; p.vy = 0; this.onGround = true; }
       else this.onGround = p.y - g2 < 0.06 && p.vy <= 0;
     }
-    if (this.moving && (this.onGround || swim2)) this.bobT += dt * sp * 1.8;
+    if (this.moving && (this.onGround || swim2)) {
+      this.bobT += dt * sp * 1.8;
+      if (!swim2) Audio.footstep(gT2 < 1.3, this.sprinting);
+    }
     const bob = this.moving ? Math.sin(this.bobT) * (swim2 ? 0.05 : 0.035) : 0;
     this.cam.position.set(p.x, p.y + 1.62 + bob, p.z);
     this.cam.rotation.set(p.pitch, p.yaw, 0);
@@ -789,6 +911,7 @@ export class Game {
     if (this.dead) return;
     this.p.hp -= n;
     if (!silent) {
+      Audio.sfx('hurt');
       const h = $('hurt');
       h.classList.add('show');
       setTimeout(() => h.classList.remove('show'), 180);
@@ -838,6 +961,7 @@ export class Game {
         if (hp > 0) p.hp = Math.min(100, p.hp + hp);
         else if (hp < 0) this.hurt(-hp);
         this.toast('Makan ' + ITEMS[k]);
+        Audio.sfx('eat');
         this.renderBag();
         return;
       }
@@ -886,10 +1010,14 @@ export class Game {
       this.drinkCd = 0.6;
       p.thirst = Math.min(100, p.thirst + 30);
       this.toast('Glek glek... 💧');
+      Audio.sfx('drink');
     } else if (this.ctx.id === 'cook') {
       const a = p.inv.daging, b = p.inv.ikan;
       p.inv.matang += a; p.inv.ikanmatang += b; p.inv.daging = 0; p.inv.ikan = 0;
       this.toast(`Dimasak: ${a + b} makanan`);
+      Audio.sfx('cook');
+      if (a + b > 0) this.stats.cook++;
+      this.updateQuest();
       this.renderBag();
     } else if (this.ctx.id === 'sleep') {
       this.sleep(this.nearBed());
@@ -902,6 +1030,7 @@ export class Game {
     if (!night) { this.toast('Belum malam. Titik spawn diset di kasur.'); return; }
     if (this.online) { this.toast('Online: malam tidak bisa dilewati. Spawn diset di kasur.'); return; }
     this.sleeping = true;
+    Audio.sfx('sleep');
     const f = $('fade');
     f.classList.add('show');
     this.timers.push(setTimeout(() => {
@@ -913,6 +1042,8 @@ export class Game {
       f.classList.remove('show');
       this.sleeping = false;
       this.toast('Selamat pagi! Kamu merasa segar ☀️');
+      this.stats.sleep++;
+      this.updateQuest();
       this.save();
     }, 1800));
   }
@@ -949,73 +1080,128 @@ export class Game {
   }
 
   attack() {
-    this.actCd = 0.48;
+    this.actCd = 0.42;
     this.swing = 0.01;
-    const tg = this.findTarget(3.4);
+    Audio.sfx('swing');
+    const tg = this.findTarget(3.6);
     if (!tg) return;
     const inv = this.p.inv;
     if (tg.kind === 'node') {
       const n = tg.n;
       let dmg = 1;
-      if (n.type === 'tree') dmg = inv.kapak ? 3 : 1;
+      if (n.type === 'tree') dmg = inv.kapak ? 3 : 1.5;
       else if (n.type === 'rock') dmg = inv.kapak ? 2 : 1;
       n.hp -= dmg;
+      const isTree = n.type === 'tree';
+      Audio.sfx(isTree ? 'chop' : 'mine');
+      this.burst(n.x, n.cy, n.z, isTree ? 0x8a5a2b : n.type === 'rock' ? 0x9a9ea4 : 0x3f8f3a);
       if (n.hp <= 0) {
         this.nature.kill(n);
-        if (n.type === 'tree') {
+        if (this.net && n.type !== 'bush') this.net.send({ t: 'k', i: n.idx });
+        if (isTree) {
+          Audio.sfx('fall');
+          this.stats.chop++;
           this.give('kayu', 3 + ((Math.random() * 3) | 0) + (inv.kapak ? 1 : 0));
-          if (Math.random() < 0.3) this.give('serat', 1);
-        } else if (n.type === 'rock') this.give('batu', 2 + ((Math.random() * 2) | 0));
-        else { this.give('buah', 2); this.give('serat', 1); }
+          if (Math.random() < 0.35) this.give('serat', 1);
+        } else if (n.type === 'rock') {
+          this.stats.mine++;
+          this.give('batu', 2 + ((Math.random() * 2) | 0));
+        } else { this.give('buah', 2); this.give('serat', 1); }
+        this.updateQuest();
       }
     } else {
       const a = tg.a;
       const dmg = inv.tombak ? 4 : inv.kapak ? 2 : 1;
+      Audio.sfx('hit');
+      this.burst(a.x, this.animals.center(a) + 0.2, a.z, 0xc0392b, 5);
       const drop = this.animals.hit(a, dmg);
-      if (drop) this.give(drop[0], drop[1]);
+      if (drop) {
+        this.stats.hunt++;
+        this.give(drop[0], drop[1]);
+        this.updateQuest();
+      }
     }
   }
 
   /* ================= REMOTE ================= */
+  makeLabel(text) {
+    const cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 64;
+    const c = cv.getContext('2d');
+    c.font = 'bold 34px sans-serif';
+    c.textAlign = 'center';
+    c.fillStyle = 'rgba(0,0,0,.55)';
+    c.fillRect(0, 8, 256, 48);
+    c.fillStyle = '#fff';
+    c.fillText(String(text).slice(0, 14), 128, 44);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
+    sp.scale.set(1.8, 0.45, 1);
+    sp.position.y = 2.5;
+    sp.renderOrder = 5;
+    return sp;
+  }
+
   onNet(m) {
+    const id = m.f;
     if (m.t === 'p') {
-      let r = this.remotes.get(m.id);
+      let r = this.remotes.get(id);
       if (!r) {
-        const info = (this.o.players || []).find((q) => q.id === m.id) || { name: 'Pemain', skin: 0 };
-        const g = buildChar(SKINS[info.skin] || SKINS[0]);
-        const cv = document.createElement('canvas');
-        cv.width = 256; cv.height = 64;
-        const c = cv.getContext('2d');
-        c.font = 'bold 34px sans-serif';
-        c.textAlign = 'center';
-        c.fillStyle = 'rgba(0,0,0,.55)';
-        c.fillRect(0, 8, 256, 48);
-        c.fillStyle = '#fff';
-        c.fillText(info.name, 128, 44);
-        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
-        sp.scale.set(1.8, 0.45, 1);
-        sp.position.y = 2.5;
-        g.add(sp);
+        const g = buildChar(SKINS[m.s] || SKINS[0]);
+        g.add(this.makeLabel(m.n || 'Pemain'));
         this.scene.add(g);
-        r = { g, x: m.x, y: m.y, z: m.z, ry: m.r, mv: 0, t: 0 };
-        this.remotes.set(m.id, r);
-        this.toast(info.name + ' bergabung');
+        r = { g, x: m.x, y: m.y, z: m.z, ry: m.r, mv: 0, t: 0, seen: 0 };
+        this.remotes.set(id, r);
+        this.toast((m.n || 'Pemain') + ' bergabung');
+        Audio.sfx('join');
       }
       r.tx = m.x; r.ty = m.y; r.tz = m.z; r.try = m.r; r.mv = m.m;
+      r.seen = performance.now();
     } else if (m.t === 'b') {
       this.addPiece(m.k, m.x, m.y, m.z, m.r);
+      Audio.sfx('place');
     } else if (m.t === 'd') {
       const key = this.pieceKey(m.k, m.x, m.y, m.z, m.r);
       const p = this.pieces.find((q) => q.key === key);
       if (p) this.removePiece(p);
+    } else if (m.t === 'k') {
+      const n = this.nature.nodes[m.i];
+      if (n && n.alive) this.nature.kill(n);
     } else if (m.t === 'left') {
-      const r = this.remotes.get(m.id);
-      if (r) { this.scene.remove(r.g); this.remotes.delete(m.id); this.toast('Pemain keluar'); }
+      this.dropRemote(id, true);
+    } else if (m.t === 'req') {
+      /* pemain baru minta status dunia; satu pemain acak yang membalas */
+      if (this.stateTimer) clearTimeout(this.stateTimer);
+      this.stateTimer = setTimeout(() => {
+        this.stateTimer = null;
+        if (!this.net) return;
+        this.net.send({ t: 'state', to: id, tm: this.t, pieces: this.pieces.map((q) => [q.k, q.x, q.y, q.z, q.r]), dead: this.nature.deadList() });
+      }, 250 + Math.random() * 900);
+    } else if (m.t === 'state') {
+      if (m.to === (this.net && this.net.myId)) {
+        if (this.gotState) return;
+        this.gotState = true;
+        if (typeof m.tm === 'number') this.t = m.tm;
+        for (const q of m.pieces || []) this.addPiece(q[0], q[1], q[2], q[3], q[4]);
+        this.nature.killIdx(m.dead || []);
+      } else if (this.stateTimer) {
+        clearTimeout(this.stateTimer);
+        this.stateTimer = null;
+      }
     }
   }
 
+  dropRemote(id, announce) {
+    const r = this.remotes.get(id);
+    if (!r) return;
+    this.scene.remove(r.g);
+    this.remotes.delete(id);
+    if (announce) this.toast('Pemain keluar');
+  }
+
   updateRemotes(dt) {
-    for (const r of this.remotes.values()) {
+    const now = performance.now();
+    for (const [id, r] of this.remotes) {
+      if (now - r.seen > 8000) { this.dropRemote(id, true); continue; }
       if (r.tx === undefined) continue;
       const k = Math.min(1, dt * 10);
       r.x = lerp(r.x, r.tx, k); r.y = lerp(r.y, r.ty, k); r.z = lerp(r.z, r.tz, k);
@@ -1025,9 +1211,9 @@ export class Game {
       r.g.position.set(r.x, r.y, r.z);
       r.g.rotation.y = r.ry;
       r.t += dt * (r.mv ? 9 : 0);
-      const s = r.mv ? Math.sin(r.t) * 0.7 : 0;
+      const sw = r.mv ? Math.sin(r.t) * 0.7 : 0;
       const u = r.g.userData;
-      u.legL.rotation.x = s; u.legR.rotation.x = -s; u.armL.rotation.x = -s; u.armR.rotation.x = s;
+      u.legL.rotation.x = sw; u.legR.rotation.x = -sw; u.armL.rotation.x = -sw; u.armR.rotation.x = sw;
     }
   }
 
@@ -1040,6 +1226,8 @@ export class Game {
       p: { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, hp: p.hp, hunger: p.hunger, thirst: p.thirst, inv: p.inv, spawn: p.spawn },
       pieces: this.pieces.map((q) => [q.k, q.x, q.y, q.z, q.r]),
       dead: this.nature.deadList(),
+      stats: this.stats,
+      quest: this.quest,
     };
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) { /* penuh */ }
   }
@@ -1098,6 +1286,15 @@ export class Game {
 
     this.updateGhost();
     this.updateRemotes(dt);
+    this.updateChips(dt);
+    this.tgtT -= dt;
+    if (this.tgtT <= 0) { this.tgtT = 0.1; this.updateTarget(); }
+    this.fireT -= dt;
+    if (this.fireT <= 0) {
+      this.fireT = 0.35 + Math.random() * 0.3;
+      if (sorted[0] && Math.hypot(sorted[0].x - p.x, sorted[0].z - p.z) < 9) Audio.fire();
+    }
+    Audio.setNight(night);
 
     this.ctxT -= dt;
     if (this.ctxT <= 0) { this.ctxT = 0.2; this.updateCtx(); this.updateBuildAfford(); }
@@ -1109,7 +1306,7 @@ export class Game {
       this.netT -= dt;
       if (this.netT <= 0) {
         this.netT = 0.1;
-        this.net.send({ t: 'p', id: this.net.myId, x: p.x, y: p.y, z: p.z, r: p.yaw, m: this.moving ? 1 : 0 });
+        this.net.send({ t: 'p', n: this.o.name, s: this.def.id, x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), r: +p.yaw.toFixed(2), m: this.moving ? 1 : 0 });
       }
     }
     if (!this.online) {
@@ -1125,7 +1322,7 @@ export class Game {
     $('barWaterF').style.width = clamp(p.thirst, 0, 100) + '%';
     const hh = Math.floor(this.t * 24), mm = Math.floor((this.t * 24 - hh) * 60);
     const icon = this.sky.day > 0.5 ? '☀️' : this.t > 0.2 && this.t < 0.3 || this.t > 0.7 && this.t < 0.8 ? '🌅' : '🌙';
-    $('clockTxt').textContent = `${icon} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · Hari ${this.day}`;
+    $('clockTxt').textContent = `${icon} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · Hari ${this.day}` + (this.net ? ` · 👥 ${this.remotes.size + 1}` : '');
   }
 
   render() {
@@ -1134,6 +1331,8 @@ export class Game {
 
   dispose() {
     this.running = false;
+    Audio.ambient(false);
+    if (this.stateTimer) clearTimeout(this.stateTimer);
     this.ac.abort();
     for (const t of this.timers) clearTimeout(t);
     if (document.exitPointerLock) document.exitPointerLock();

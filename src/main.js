@@ -2,7 +2,8 @@ import './style.css';
 import * as THREE from 'three';
 import { Lobby } from './lobby.js';
 import { Game } from './game.js';
-import { Net } from './net.js';
+import { Net, Browse, MAXP, OW_SEED } from './net.js';
+import { Audio } from './audio.js';
 import { SKINS, drawPreview } from './chars.js';
 import { initTextures } from './textures.js';
 import { sleep } from './util.js';
@@ -18,7 +19,25 @@ const store = {
 };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const settings = Object.assign({ gfx: 'standar', fps: 60, sens: 1 }, store.get('ps_settings', {}));
+const errBox = document.createElement('div');
+errBox.id = 'errBox';
+document.body.appendChild(errBox);
+let errCount = 0;
+function showErr(msg) {
+  if (errCount++ > 6) return;
+  errBox.style.display = 'block';
+  errBox.textContent = 'Error: ' + msg + '  (ketuk untuk tutup)';
+}
+errBox.addEventListener('pointerdown', () => { errBox.style.display = 'none'; });
+window.addEventListener('error', (e) => showErr((e.message || 'unknown') + (e.lineno ? ' @' + e.lineno : '')));
+window.addEventListener('unhandledrejection', (e) => showErr((e.reason && e.reason.message) || String(e.reason)));
+document.addEventListener('pointerdown', () => Audio.unlock(), true);
+document.addEventListener('click', (e) => {
+  if (e.target.closest && e.target.closest('.btn, .bigRow, .iconBtn, .seg button, .vItem, .roomRow')) Audio.sfx('click');
+}, true);
+
+const settings = Object.assign({ gfx: 'standar', fps: 60, sens: 1, music: 0.6, sfx: 0.8 }, store.get('ps_settings', {}));
+Audio.setVolumes(settings.music, settings.sfx);
 let account = store.get('ps_account', null);
 let skinId = store.get('ps_skin', 0);
 if (!SKINS[skinId]) skinId = 0;
@@ -34,8 +53,13 @@ let inRoom = false;
 let mode = 'none';
 
 const SCREENS = ['sLoad', 'sIntro', 'sLobby', 'sOnline', 'sCreate', 'sFind', 'sRoom', 'hud'];
+let browse = null;
+function stopBrowse() {
+  if (browse) { browse.close(); browse = null; }
+}
 function show(...ids) {
   for (const s of SCREENS) $(s).classList.toggle('show', ids.includes(s));
+  if (!ids.includes('sOnline')) stopBrowse();
 }
 function flash(msg) {
   const d = document.createElement('div');
@@ -361,6 +385,8 @@ function refreshSettingsUI() {
   $('gfxUlt').classList.toggle('on', settings.gfx === 'ultra');
   for (const f of [30, 60, 120]) $('fps' + f).classList.toggle('on', settings.fps === f);
   $('sensRange').value = settings.sens;
+  $('musRange').value = settings.music;
+  $('sfxRange').value = settings.sfx;
 }
 function saveSettings() {
   store.set('ps_settings', settings);
@@ -375,11 +401,15 @@ $('gfxStd').onclick = () => { settings.gfx = 'standar'; saveSettings(); };
 $('gfxUlt').onclick = () => { settings.gfx = 'ultra'; saveSettings(); };
 for (const f of [30, 60, 120]) $('fps' + f).onclick = () => { settings.fps = f; saveSettings(); };
 $('sensRange').oninput = (e) => { settings.sens = parseFloat(e.target.value); store.set('ps_settings', settings); };
+$('musRange').oninput = (e) => { settings.music = parseFloat(e.target.value); Audio.setVolumes(settings.music, settings.sfx); store.set('ps_settings', settings); };
+$('sfxRange').oninput = (e) => { settings.sfx = parseFloat(e.target.value); Audio.setVolumes(settings.music, settings.sfx); store.set('ps_settings', settings); };
+$('sfxRange').onchange = () => Audio.sfx('pickup');
 $('setClose').onclick = () => $('mSet').classList.remove('show');
 
 /* ================= LOBI ================= */
 function toLobby() {
   mode = 'lobby';
+  Audio.music('menu');
   show('sLobby');
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.setSize(innerWidth, innerHeight);
@@ -418,25 +448,63 @@ $('lbSet').onclick = openSettings;
 $('lbVault').onclick = () => { renderVault(); $('mVault').classList.add('show'); };
 $('vaultClose').onclick = () => $('mVault').classList.remove('show');
 $('btnOffline').onclick = () => startGame({ online: false });
-$('btnOnline').onclick = () => show('sOnline');
 
 /* ================= ONLINE ================= */
+const myInfo = () => ({ name: account.name, skin: skinId });
+
+function renderRoomList(list) {
+  const w = $('roomList');
+  w.innerHTML = '';
+  $('onStatus').textContent = list.length ? list.length + ' room aktif' : 'Online ✓';
+  if (!list.length) {
+    w.innerHTML = '<div class="roomEmpty">Belum ada room publik.<br>Buat room pertama, atau main di Open World!</div>';
+    return;
+  }
+  for (const r of list) {
+    const el = document.createElement('div');
+    el.className = 'roomRow';
+    el.innerHTML = `<b>${esc(r.name)}<small>Host: ${esc(r.hostName || '?')}</small></b><em>${r.n || 1}/${r.max || MAXP}</em>`;
+    el.onclick = () => joinFromList(r);
+    w.appendChild(el);
+  }
+}
+
+async function openOnlineHub() {
+  show('sOnline');
+  stopBrowse();
+  $('roomList').innerHTML = '';
+  $('onStatus').textContent = 'Menghubungkan...';
+  const b = new Browse(renderRoomList);
+  browse = b;
+  try {
+    await b.start();
+    if (browse === b) { $('onStatus').textContent = 'Online ✓'; renderRoomList(b.list()); }
+  } catch (e) {
+    if (browse === b) {
+      $('onStatus').textContent = 'Offline';
+      $('roomList').innerHTML = '<div class="roomEmpty">' + esc(e.message) + '</div>';
+    }
+  }
+}
+
+$('btnOnline').onclick = openOnlineHub;
 $('onBack').onclick = () => show('sLobby');
 $('onCreate').onclick = () => { $('crMsg').textContent = ''; show('sCreate'); };
 $('onFind').onclick = () => { $('fnMsg').textContent = ''; show('sFind'); };
-$('crBack').onclick = () => show('sOnline');
-$('fnBack').onclick = () => show('sOnline');
+$('crBack').onclick = openOnlineHub;
+$('fnBack').onclick = openOnlineHub;
 
 function renderSlots(pl) {
   const w = $('slots');
   w.innerHTML = '';
+  const hostId = net && net.info ? net.info.host : null;
   const mk = (i) => {
     const p = pl[i];
     const d = document.createElement('div');
     d.className = 'slot' + (p ? ' full' : '');
     if (p) {
       const col = (SKINS[p.skin] && SKINS[p.skin].shirt) || '#fff';
-      d.innerHTML = `<span class="dot" style="background:${col}"></span>${esc(p.name)}${p.id === 'h' ? ' 👑' : ''}`;
+      d.innerHTML = `<span class="dot" style="background:${col}"></span>${esc(p.name)}${p.id === hostId ? ' 👑' : ''}`;
     } else d.innerHTML = `Slot ${i + 1}<br>Menunggu pemain...`;
     return d;
   };
@@ -454,7 +522,7 @@ function setupRoom(room, isHost) {
   $('roomGo').classList.toggle('hidden', !isHost);
   $('roomWait').classList.toggle('hidden', isHost);
   net.onLobby = renderSlots;
-  net.onStart = (m) => beginOnline(m.seed, m.players);
+  net.onStart = (m) => beginOnline(m.seed, net.players, false);
   net.onClosed = () => { if (inRoom) leaveRoom('Host menutup room'); };
   renderSlots(net.players);
   inRoom = true;
@@ -464,7 +532,7 @@ function setupRoom(room, isHost) {
 function leaveRoom(msg) {
   inRoom = false;
   if (net) { net.close(); net = null; }
-  show('sOnline');
+  openOnlineHub();
   if (msg) flash(msg);
 }
 
@@ -472,11 +540,10 @@ async function createRoom() {
   const room = $('crRoom').value.trim(), pw = $('crPw').value;
   const msg = $('crMsg');
   if (room.length < 2) { msg.textContent = 'Nama room minimal 2 karakter.'; return; }
-  if (pw.length < 1) { msg.textContent = 'Isi password room.'; return; }
   msg.textContent = 'Membuat room...';
   const n = new Net();
   try {
-    await n.host(room, pw, { name: account.name, skin: skinId });
+    await n.host(room, pw, myInfo());
   } catch (e) {
     msg.textContent = e.message;
     n.close();
@@ -484,18 +551,18 @@ async function createRoom() {
   }
   net = n;
   msg.textContent = '';
-  setupRoom(room, true);
+  setupRoom(room + (pw ? ' 🔒' : ''), true);
 }
 
-async function joinRoom() {
+async function joinPrivate() {
   const room = $('fnRoom').value.trim(), pw = $('fnPw').value;
   const msg = $('fnMsg');
   if (room.length < 2) { msg.textContent = 'Isi nama room.'; return; }
-  if (pw.length < 1) { msg.textContent = 'Isi password room.'; return; }
+  if (!pw) { msg.textContent = 'Isi password. Room publik ada di daftar.'; return; }
   msg.textContent = 'Mencari room...';
   const n = new Net();
   try {
-    await n.join(room, pw, { name: account.name, skin: skinId });
+    await n.joinPrivate(room, pw, myInfo());
   } catch (e) {
     msg.textContent = e.message;
     n.close();
@@ -503,17 +570,57 @@ async function joinRoom() {
   }
   net = n;
   msg.textContent = '';
-  setupRoom(room, false);
+  setupRoom(room + ' 🔒', false);
+}
+
+let joining = false;
+async function joinFromList(r) {
+  if (joining) return;
+  joining = true;
+  $('onStatus').textContent = 'Masuk ke ' + r.name + '...';
+  const n = new Net();
+  try {
+    await n.join(r.id, myInfo());
+  } catch (e) {
+    n.close();
+    $('onStatus').textContent = 'Online ✓';
+    flash(e.message);
+    joining = false;
+    return;
+  }
+  joining = false;
+  net = n;
+  setupRoom(r.name, false);
+}
+
+async function goOpenWorld() {
+  if (joining) return;
+  joining = true;
+  $('onStatus').textContent = 'Mencari Open World...';
+  const n = new Net();
+  try {
+    await n.joinOpen(myInfo());
+  } catch (e) {
+    n.close();
+    $('onStatus').textContent = 'Online ✓';
+    flash(e.message);
+    joining = false;
+    return;
+  }
+  joining = false;
+  net = n;
+  startGame({ online: true, seed: OW_SEED, open: true });
 }
 
 $('crGo').onclick = createRoom;
-$('fnGo').onclick = joinRoom;
+$('fnGo').onclick = joinPrivate;
+$('onOpen').onclick = goOpenWorld;
 $('roomLeave').onclick = () => leaveRoom();
 $('roomGo').onclick = () => {
   if (!net) return;
-  const seed = (Math.random() * 1e9) | 0;
+  const seed = net.info.seed;
   net.start(seed);
-  beginOnline(seed, net.players);
+  beginOnline(seed, net.players, true);
 };
 
 function beginOnline(seed, players) {
@@ -529,6 +636,7 @@ async function startGame(o) {
     net: o.online ? net : null,
     seed: o.seed,
     players: o.players,
+    open: !!o.open,
     name: account.name,
     skinId,
     openSettings,
@@ -545,12 +653,16 @@ async function startGame(o) {
   }
   game = g;
   show('hud');
+  if (net) {
+    net.onMsg = (m) => { try { g.onNet(m); } catch (e) { showErr(e.message); } };
+    net.onClosed = () => {};
+  }
   g.begin();
-  if (net) net.onMsg = (m) => g.onNet(m);
   mode = 'game';
 }
 
 function exitGame() {
+  Audio.music('menu');
   if (game) { game.dispose(); game = null; }
   if (net) { net.close(); net = null; }
   $('mSet').classList.remove('show');
@@ -565,12 +677,16 @@ function frame(ts) {
   if (ts - last < minDt - 2) return;
   const dt = Math.min((ts - last) / 1000, 0.1);
   last = ts;
-  if (mode === 'lobby' && lobby) {
-    lobby.update(dt);
-    lobby.render(renderer);
-  } else if (mode === 'game' && game) {
-    game.update(dt);
-    game.render();
+  try {
+    if (mode === 'lobby' && lobby) {
+      lobby.update(dt);
+      lobby.render(renderer);
+    } else if (mode === 'game' && game) {
+      game.update(dt);
+      game.render();
+    }
+  } catch (e) {
+    showErr((e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e));
   }
 }
 
@@ -586,6 +702,7 @@ document.addEventListener('visibilitychange', () => {
 
 /* ================= BOOT ================= */
 async function boot() {
+  Audio.music('menu');
   requestAnimationFrame(frame);
   await runLoading(async (p) => {
     p(8, 'Memuat tekstur...');

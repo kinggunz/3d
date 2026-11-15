@@ -11,7 +11,7 @@
   "dependencies": {
     "@capacitor/android": "^6.1.2",
     "@capacitor/core": "^6.1.2",
-    "peerjs": "^1.5.4",
+    "mqtt": "^5.10.1",
     "three": "^0.160.0"
   },
   "devDependencies": {

@@ -228,16 +228,17 @@ export function makeSky(scene) {
   return api;
 }
 
-/* ---------- Pohon, batu, semak, rumput ---------- */
+/* ---------- Pohon, batu, semak, bunga, rumput ---------- */
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 
 export function makeNature(hf, seed, scene) {
   const rnd = mulberry32(seed ^ 0x51ed270b);
   const nz = makeNoise(seed + 5);
+  const nz2 = makeNoise(seed + 301);
   const dummy = new THREE.Object3D();
   const col = new THREE.Color();
 
-  const MAXT = 1500, MAXR = 320, MAXB = 260;
+  const MAXT = 1500, MAXR = 320, MAXB = 260, MAXF = 900;
   const trunk = new THREE.InstancedMesh(
     new THREE.CylinderGeometry(0.2, 0.32, 1, 6).translate(0, 0.5, 0),
     new THREE.MeshStandardMaterial({ color: 0x6b4a2b, roughness: 1 }),
@@ -246,6 +247,11 @@ export function makeNature(hf, seed, scene) {
   const crown = new THREE.InstancedMesh(
     new THREE.ConeGeometry(1, 1, 7).translate(0, 0.5, 0),
     new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }),
+    MAXT * 2
+  );
+  const leaf = new THREE.InstancedMesh(
+    new THREE.IcosahedronGeometry(1, 1),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true }),
     MAXT * 2
   );
   const rocks = new THREE.InstancedMesh(
@@ -263,7 +269,18 @@ export function makeNature(hf, seed, scene) {
     new THREE.MeshStandardMaterial({ color: 0xd8243a, roughness: 0.5 }),
     MAXB * 3
   );
-  const meshes = [trunk, crown, rocks, bushes, berries];
+  const flowers = new THREE.InstancedMesh(
+    new THREE.IcosahedronGeometry(0.11, 0).translate(0, 0.32, 0),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 }),
+    MAXF
+  );
+  const stems = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.015, 0.015, 0.32, 3).translate(0, 0.16, 0),
+    new THREE.MeshStandardMaterial({ color: 0x2f7d2a, roughness: 1 }),
+    MAXF
+  );
+  for (let i = 0; i < MAXT * 2; i++) { crown.setMatrixAt(i, ZERO); leaf.setMatrixAt(i, ZERO); }
+  const meshes = [trunk, crown, leaf, rocks, bushes, berries, flowers, stems];
 
   const setPart = (mesh, i, px, py, pz, sx, sy, sz, ry, color) => {
     dummy.position.set(px, py, pz);
@@ -276,27 +293,103 @@ export function makeNature(hf, seed, scene) {
   };
 
   const nodes = [];
-  let nt = 0, nr = 0, nb = 0, nbr = 0, tries = 0;
+  let nt = 0, nr = 0, nb = 0, nbr = 0;
   const S = SIZE - 20;
 
-  while (nt < MAXT && tries < 14000) {
+  const addTree = (x, z, h, kind) => {
+    if (nt >= MAXT) return false;
+    const s = 0.8 + rnd() * 0.9;
+    const parts = [];
+    let cr = 0.5 * s, cy = h + 1.6 * s, th = 2.4 * s, hit = 0.85, hp = 6;
+    if (kind === 'pine') {
+      parts.push(setPart(trunk, nt, x, h - 0.1, z, s, th, s, 0));
+      col.setHSL(0.27 + rnd() * 0.07, 0.5 + rnd() * 0.2, 0.2 + rnd() * 0.1);
+      parts.push(setPart(crown, nt * 2, x, h + 1.4 * s, z, 1.7 * s, 3.4 * s, 1.7 * s, rnd() * 6, col));
+      parts.push(setPart(crown, nt * 2 + 1, x, h + 3.2 * s, z, 1.2 * s, 2.6 * s, 1.2 * s, rnd() * 6, col));
+    } else if (kind === 'round') {
+      th = 2.1 * s;
+      cy = h + 1.8 * s;
+      parts.push(setPart(trunk, nt, x, h - 0.1, z, s * 1.15, th, s * 1.15, 0));
+      const hueShift = rnd();
+      if (hueShift < 0.14) col.setHSL(0.14 + rnd() * 0.03, 0.65, 0.42);
+      else col.setHSL(0.25 + rnd() * 0.07, 0.55 + rnd() * 0.2, 0.28 + rnd() * 0.1);
+      parts.push(setPart(leaf, nt * 2, x, h + 2.9 * s, z, 1.7 * s, 1.45 * s, 1.7 * s, rnd() * 6, col));
+      parts.push(setPart(leaf, nt * 2 + 1, x + (rnd() - 0.5) * 0.9 * s, h + 3.9 * s, z + (rnd() - 0.5) * 0.9 * s, 1.15 * s, 1.0 * s, 1.15 * s, rnd() * 6, col));
+    } else {
+      th = 3.6 * s;
+      cr = 0.4 * s;
+      cy = h + 1.8 * s;
+      hit = 0.8;
+      hp = 5;
+      parts.push(setPart(trunk, nt, x, h - 0.1, z, s * 0.62, th, s * 0.62, 0));
+      col.setHSL(0.31 + rnd() * 0.03, 0.6, 0.3 + rnd() * 0.06);
+      parts.push(setPart(leaf, nt * 2, x, h + th, z, 2.1 * s, 0.32 * s, 2.1 * s, rnd() * 6, col));
+      parts.push(setPart(leaf, nt * 2 + 1, x, h + th + 0.28 * s, z, 1.3 * s, 0.3 * s, 1.3 * s, rnd() * 6, col));
+    }
+    nodes.push({ type: 'tree', kind, x, y: h, z, r: hit, cr, cy, hp, max: hp, alive: true, parts, idx: nodes.length });
+    nt++;
+    return true;
+  };
+  const addRock = (x, z, h) => {
+    if (nr >= MAXR) return false;
+    const s = 0.6 + rnd() * 1.1;
+    col.setHSL(0.6, 0.05, 0.33 + rnd() * 0.2);
+    const parts = [setPart(rocks, nr, x, h + 0.25 * s, z, s * 1.1, s * 0.8, s, rnd() * 6.28, col)];
+    nodes.push({ type: 'rock', x, y: h, z, r: 0.9 * s + 0.3, cr: 0.8 * s, cy: h + 0.4, hp: 6, max: 6, alive: true, parts, idx: nodes.length });
+    nr++;
+    return true;
+  };
+  const addBush = (x, z, h) => {
+    if (nb >= MAXB) return false;
+    const s = 0.7 + rnd() * 0.5;
+    col.setHSL(0.3 + rnd() * 0.05, 0.55, 0.17 + rnd() * 0.06);
+    const parts = [setPart(bushes, nb, x, h + 0.35 * s, z, s, s * 0.7, s, rnd() * 6, col)];
+    for (let k = 0; k < 3; k++) {
+      const a = rnd() * 6.28;
+      parts.push(setPart(berries, nbr, x + Math.cos(a) * 0.6 * s, h + 0.62 * s, z + Math.sin(a) * 0.6 * s, 1, 1, 1, 0));
+      nbr++;
+    }
+    nodes.push({ type: 'bush', x, y: h, z, r: 0.75, cr: 0, cy: h + 0.4, hp: 1, max: 1, alive: true, parts, regrow: 0, idx: nodes.length });
+    nb++;
+    return true;
+  };
+  const kindAt = (x, z, h) => {
+    if (h < 2.7) return 'palm';
+    return nz2(x * 0.02 + 40, z * 0.02 + 40, 2) > 0.52 ? 'round' : 'pine';
+  };
+
+  /* ---- paket awal dekat titik spawn (agar langsung bisa ngapain) ---- */
+  const place = (count, rmin, rmax, minH, maxH, fn) => {
+    let got = 0, t = 0;
+    while (got < count && t < 600) {
+      t++;
+      const a = rnd() * Math.PI * 2, r = rmin + rnd() * (rmax - rmin);
+      const x = 3 + Math.cos(a) * r, z = 3 + Math.sin(a) * r;
+      const h = hf.sample(x, z);
+      if (h < minH || h > maxH) continue;
+      if (fn(x, z, h)) got++;
+    }
+  };
+  place(8, 8, 16, 2.2, 7, (x, z, h) => addTree(x, z, h, rnd() < 0.5 ? 'round' : 'pine'));
+  place(4, 9, 17, 2.0, 8, (x, z, h) => addRock(x, z, h));
+  place(3, 8, 14, 2.0, 6, (x, z, h) => addBush(x, z, h));
+
+  let tries = 0;
+  while (nt < MAXT && tries < 16000) {
     tries++;
     const x = (rnd() - 0.5) * S, z = (rnd() - 0.5) * S;
     const h = hf.sample(x, z);
-    if (h < 1.5 || h > 9.5) continue;
+    if (h < 1.0 || h > 9.5) continue;
     if (x * x + z * z < 64) continue;
+    if (h < 2.7) {
+      if (rnd() > 0.045) continue;
+      addTree(x, z, h, 'palm');
+      continue;
+    }
     const f = nz(x * 0.035, z * 0.035, 3);
     if (f < 0.46 && rnd() > 0.07) continue;
     if (f < 0.5 && rnd() > 0.5) continue;
-    const s = 0.8 + rnd() * 0.9;
-    const th = 2.4 * s;
-    const parts = [];
-    parts.push(setPart(trunk, nt, x, h - 0.1, z, s, th, s, 0));
-    col.setHSL(0.27 + rnd() * 0.07, 0.5 + rnd() * 0.2, 0.2 + rnd() * 0.1);
-    parts.push(setPart(crown, nt * 2, x, h + 1.4 * s, z, 1.7 * s, 3.4 * s, 1.7 * s, rnd() * 6, col));
-    parts.push(setPart(crown, nt * 2 + 1, x, h + 3.2 * s, z, 1.2 * s, 2.6 * s, 1.2 * s, rnd() * 6, col));
-    nodes.push({ type: 'tree', x, y: h, z, r: 0.85, cr: 0.5 * s, cy: h + 1.6 * s, hp: 6, max: 6, alive: true, parts, idx: nodes.length });
-    nt++;
+    addTree(x, z, h, kindAt(x, z, h));
   }
 
   tries = 0;
@@ -307,11 +400,7 @@ export function makeNature(hf, seed, scene) {
     if (h < 0.6 || h > 12) continue;
     if (x * x + z * z < 36) continue;
     if (rnd() > 0.5) continue;
-    const s = 0.6 + rnd() * 1.1;
-    col.setHSL(0.6, 0.05, 0.33 + rnd() * 0.2);
-    const parts = [setPart(rocks, nr, x, h + 0.25 * s, z, s * 1.1, s * 0.8, s, rnd() * 6.28, col)];
-    nodes.push({ type: 'rock', x, y: h, z, r: 0.9 * s + 0.3, cr: 0.8 * s, cy: h + 0.4, hp: 6, max: 6, alive: true, parts, idx: nodes.length });
-    nr++;
+    addRock(x, z, h);
   }
 
   tries = 0;
@@ -322,28 +411,44 @@ export function makeNature(hf, seed, scene) {
     if (h < 1.2 || h > 6.5) continue;
     if (x * x + z * z < 25) continue;
     if (rnd() > 0.35) continue;
-    const s = 0.7 + rnd() * 0.5;
-    col.setHSL(0.3 + rnd() * 0.05, 0.55, 0.17 + rnd() * 0.06);
-    const parts = [setPart(bushes, nb, x, h + 0.35 * s, z, s, s * 0.7, s, rnd() * 6, col)];
-    for (let k = 0; k < 3; k++) {
-      const a = rnd() * 6.28;
-      parts.push(setPart(berries, nbr, x + Math.cos(a) * 0.6 * s, h + 0.62 * s, z + Math.sin(a) * 0.6 * s, 1, 1, 1, 0));
-      nbr++;
-    }
-    nodes.push({ type: 'bush', x, y: h, z, r: 0.7, cr: 0, cy: h + 0.4, hp: 1, max: 1, alive: true, parts, regrow: 0, idx: nodes.length });
-    nb++;
+    addBush(x, z, h);
+  }
+
+  /* bunga hias */
+  let nf = 0;
+  const fpal = [0xff5a7a, 0xffd23c, 0xffffff, 0xb066ff, 0xff8a3c];
+  tries = 0;
+  while (nf < MAXF && tries < 30000) {
+    tries++;
+    const x = (rnd() - 0.5) * (SIZE - 30), z = (rnd() - 0.5) * (SIZE - 30);
+    const h = hf.sample(x, z);
+    if (h < 1.7 || h > 6.5) continue;
+    if (nz(x * 0.06 + 90, z * 0.06 + 90, 2) < 0.52) continue;
+    dummy.position.set(x, h - 0.02, z);
+    const k = 0.8 + rnd() * 0.6;
+    dummy.scale.set(k, k, k);
+    dummy.rotation.set(0, rnd() * 6, 0);
+    dummy.updateMatrix();
+    flowers.setMatrixAt(nf, dummy.matrix);
+    stems.setMatrixAt(nf, dummy.matrix);
+    col.setHex(fpal[(rnd() * fpal.length) | 0]);
+    flowers.setColorAt(nf, col);
+    nf++;
   }
 
   trunk.count = nt;
   crown.count = nt * 2;
+  leaf.count = nt * 2;
   rocks.count = nr;
   bushes.count = nb;
   berries.count = nbr;
+  flowers.count = nf;
+  stems.count = nf;
   for (const m of meshes) {
     m.instanceMatrix.needsUpdate = true;
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
     m.frustumCulled = false;
-    m.castShadow = true;
+    m.castShadow = m !== flowers && m !== stems;
     scene.add(m);
   }
 

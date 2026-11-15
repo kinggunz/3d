@@ -26,48 +26,57 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Setup Android SDK Manually
-        run: |
-          export ANDROID_SDK_ROOT=$HOME/android-sdk
-          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools/latest
-          
-          # Download Command Line Tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdtools.zip
-          unzip -q cmdtools.zip -d temp_tools
-          mv temp_tools/cmdline-tools/* $ANDROID_SDK_ROOT/cmdline-tools/latest/
-          rm -rf cmdtools.zip temp_tools
-
-          # Export Environment Variables
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
-
-          # Accept SDK Licenses
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
-
-          # Install Build Tools & Platforms
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Build Web App
+      - name: Build web game
         run: npm run build
 
-      - name: Add Android Platform
-        run: npx cap add android
-
-      - name: Sync Capacitor
-        run: npx cap sync android
-
-      - name: Build Debug APK
+      - name: Add Android platform
         run: |
-          cd android
-          ./gradlew assembleDebug
+          npx cap add android
+          npx cap sync android
 
-      - name: Upload APK Artifact
+      - name: Generate app icon from logo
+        continue-on-error: true
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y librsvg2-bin
+          rsvg-convert -w 1024 -h 1024 assets/icon.svg -o assets/icon.png
+          npx --yes @capacitor/assets generate --android --iconBackgroundColor '#14213d' --iconBackgroundColorDark '#14213d'
+
+      - name: Force landscape and fullscreen
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          sed -i 's/<activity/<activity android:screenOrientation="sensorLandscape"/' "$MANIFEST"
+          STYLES=android/app/src/main/res/values/styles.xml
+          sed -i '/<style name="AppTheme.NoActionBar"/a \        <item name="android:windowFullscreen">true</item>\n        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>' "$STYLES"
+          cat "$STYLES"
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          # Pakai SDK bawaan runner, hindari konflik variabel SDK
+          unset ANDROID_SDK_ROOT
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk PetualanganSantay.apk
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: PetualanganSantay-APK
+          path: PetualanganSantay.apk
+
+      - name: Publish release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Petualangan Santay v${{ github.run_number }}
+          files: PetualanganSantay.apk

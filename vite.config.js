@@ -1,7 +1,8 @@
 export default {
   base: './',
+  define: { global: 'globalThis' },
   build: {
     outDir: 'dist',
-    chunkSizeWarningLimit: 3000
+    chunkSizeWarningLimit: 4000
   }
 };
