@@ -1,0 +1,21 @@
+{
+  "name": "petualangan-santay",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Petualangan Santay - game survival 3D by Gunz Developer",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "peerjs": "^1.5.4",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2",
+    "vite": "^5.4.0"
+  }
+}

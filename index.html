@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#0a1230" />
+  <title>Petualangan Santay</title>
+  <link rel="icon" href="logo.svg" />
+</head>
+<body>
+  <canvas id="gl"></canvas>
+
+  <div id="app">
+    <!-- LOADING -->
+    <div id="sLoad" class="screen opaque">
+      <canvas id="loadBg"></canvas>
+      <div class="loadBox">
+        <img class="logo" src="logo.svg" alt="" />
+        <h1>PETUALANGAN SANTAY</h1>
+        <div id="loadLabel" class="loadLabel">Memuat...</div>
+        <div class="bar"><i id="loadFill"></i></div>
+        <div id="loadPct" class="pct">1%</div>
+        <div id="loadTip" class="tip"></div>
+        <small>by Gunz Developer</small>
+      </div>
+    </div>
+
+    <!-- INTRO -->
+    <div id="sIntro" class="screen opaque">
+      <canvas id="introBg"></canvas>
+      <div class="introCenter">
+        <h1 id="introTitle" class="introTitle">PETUALANGAN SANTAY</h1>
+        <div id="introForm" class="hidden">
+          <h2>Buat Akun</h2>
+          <input id="inName" maxlength="14" placeholder="Masukkan nama" autocomplete="off" />
+          <button id="btnMakeAcc" class="btn big">Buat Akun</button>
+        </div>
+        <div id="introTap" class="hidden">
+          <div id="helloName" class="hello"></div>
+          <div class="tapText">Ketuk di mana saja untuk masuk</div>
+        </div>
+      </div>
+      <small class="credit">by Gunz Developer</small>
+    </div>
+
+    <!-- LOBI -->
+    <div id="sLobby" class="screen">
+      <div class="topLeft"><div class="chip" id="lbName">Santay</div></div>
+      <div class="topRight"><button id="lbSet" class="iconBtn">⚙️</button></div>
+      <div class="leftMid"><button id="lbVault" class="btn side">🗄️ Vault</button></div>
+      <div class="charTag" id="lbChar">Santay</div>
+      <div class="bottomRight">
+        <div class="startLabel">MULAI</div>
+        <button id="btnOnline" class="btn modeBtn on">🌐 Online</button>
+        <button id="btnOffline" class="btn modeBtn off">📴 Offline</button>
+      </div>
+      <small class="credit">by Gunz Developer</small>
+    </div>
+
+    <!-- ONLINE -->
+    <div id="sOnline" class="screen shade">
+      <button id="onBack" class="btn back">‹ Kembali</button>
+      <div class="center">
+        <h2 class="pageTitle">Mabar Online</h2>
+        <div class="cards">
+          <button id="onCreate" class="bigCard"><span>🏕️</span><b>Buat Room</b><i>Jadi host, undang teman</i></button>
+          <button id="onFind" class="bigCard"><span>🔍</span><b>Cari Room</b><i>Masuk dengan nama &amp; password</i></button>
+        </div>
+      </div>
+    </div>
+
+    <div id="sCreate" class="screen shade">
+      <button id="crBack" class="btn back">‹ Kembali</button>
+      <div class="center">
+        <div class="formCard">
+          <h2>Buat Room</h2>
+          <input id="crRoom" maxlength="16" placeholder="Nama room" autocomplete="off" />
+          <input id="crPw" maxlength="16" placeholder="Password" autocomplete="off" />
+          <button id="crGo" class="btn big">Buat</button>
+          <div id="crMsg" class="msg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sFind" class="screen shade">
+      <button id="fnBack" class="btn back">‹ Kembali</button>
+      <div class="center">
+        <div class="formCard">
+          <h2>Cari Room</h2>
+          <input id="fnRoom" maxlength="16" placeholder="Nama room" autocomplete="off" />
+          <input id="fnPw" maxlength="16" placeholder="Password" autocomplete="off" />
+          <button id="fnGo" class="btn big">Masuk</button>
+          <div id="fnMsg" class="msg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sRoom" class="screen">
+      <button id="roomLeave" class="btn back">‹ Keluar</button>
+      <div class="roomTitle" id="roomTitle">Room</div>
+      <div id="slots" class="slots"></div>
+      <div class="charTag" id="roomMe">Santay</div>
+      <div class="bottomRight">
+        <button id="roomGo" class="btn start hidden">GAS! 🚀</button>
+        <div id="roomWait" class="wait hidden">Menunggu host memulai...</div>
+      </div>
+    </div>
+
+    <!-- MODAL -->
+    <div id="mVault" class="modal">
+      <div class="card">
+        <h3>🗄️ Vault Karakter</h3>
+        <div id="vaultGrid" class="vaultGrid"></div>
+        <button id="vaultClose" class="btn">Pilih</button>
+      </div>
+    </div>
+
+    <div id="mSet" class="modal top">
+      <div class="card">
+        <h3>⚙️ Pengaturan</h3>
+        <div class="row"><label>Grafik</label>
+          <div class="seg"><button id="gfxStd">Standar</button><button id="gfxUlt">Ultra</button></div>
+        </div>
+        <div class="row"><label>FPS</label>
+          <div class="seg"><button id="fps30">30</button><button id="fps60">60</button><button id="fps120">120</button></div>
+        </div>
+        <div class="row"><label>Sensitivitas</label>
+          <input id="sensRange" type="range" min="0.4" max="2.2" step="0.1" value="1" />
+        </div>
+        <button id="setClose" class="btn">Tutup</button>
+      </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" class="screen hudScreen">
+      <div id="stats">
+        <div class="bar2 hp"><span>❤️</span><div><i id="barHpF"></i></div></div>
+        <div class="bar2 food"><span>🍖</span><div><i id="barFoodF"></i></div></div>
+        <div class="bar2 water"><span>💧</span><div><i id="barWaterF"></i></div></div>
+      </div>
+      <div id="clockTxt" class="clock">☀️ 07:00 · Hari 1</div>
+      <div class="topBtns">
+        <button id="btnBag" class="iconBtn pe">🎒</button>
+        <button id="btnPause" class="iconBtn pe">⏸</button>
+      </div>
+      <div class="crosshair"></div>
+      <div id="hurt" class="hurt"></div>
+      <div id="toasts" class="toasts"></div>
+
+      <div id="joy" class="joy pe"><div id="joyKnob" class="knob"></div></div>
+
+      <button id="btnAct" class="rbtn act pe">✊</button>
+      <button id="btnJump" class="rbtn jump pe">⤴</button>
+      <button id="btnBuild" class="rbtn build pe">🏗️</button>
+      <button id="btnEat" class="rbtn eat pe">🍖</button>
+      <button id="btnCtx" class="rbtn ctx pe"></button>
+
+      <div id="buildBar" class="buildBar pe">
+        <div id="buildItems" class="buildItems"></div>
+        <button id="btnRot" class="rbtn rot">🔄</button>
+      </div>
+
+      <div id="fade" class="fade"><span>Zzz...</span></div>
+      <div id="panelDead" class="deadPanel"><div>Kamu pingsan...<small>Bangkit di titik spawn</small></div></div>
+
+      <div id="panelBag" class="panel pe">
+        <div class="card wide">
+          <h3>🎒 Tas</h3>
+          <div id="bagList" class="bagList"></div>
+          <div id="bagCraft" class="bagCraft"></div>
+          <button id="bagClose" class="btn">Tutup</button>
+        </div>
+      </div>
+      <div id="panelPause" class="panel pe">
+        <div class="card">
+          <h3>Jeda</h3>
+          <button id="pauseResume" class="btn big">Lanjut</button>
+          <button id="pauseSettings" class="btn">⚙️ Pengaturan</button>
+          <button id="pauseSave" class="btn">💾 Simpan</button>
+          <button id="pauseExit" class="btn danger">Simpan &amp; Keluar</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="rotate" class="rotateMsg">Putar HP ke mode landscape 📱↻</div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
