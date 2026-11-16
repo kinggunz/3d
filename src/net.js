@@ -10,6 +10,7 @@ const BROKERS = [
 ];
 const NS = 'gunzdev/santay/v1';
 export const MAXP = 4;
+export const WORLD_MAX = 6;
 export const OW_MAX = 12;
 export const OW_SEED = 20260101;
 const STALE = 45000;
@@ -191,7 +192,7 @@ export class Net {
   }
 
   /* host: buat room. pw kosong = publik (muncul di daftar global), pw terisi = private */
-  async host(name, pw, me) {
+  async host(name, pw, me, extra) {
     const isPub = !pw;
     const roomId = isPub ? 'p' + hashStr(name.toLowerCase()) + rid().slice(0, 3) : Net.privId(name, pw);
     this.isHost = true;
@@ -202,6 +203,8 @@ export class Net {
       if (exists) { this.close(); throw new Error('Room dengan nama & password itu sudah ada.'); }
     }
     this.info = { id: roomId, name, host: this.myId, hostName: me.name, n: 1, max: MAXP, seed: (Math.random() * 1e9) | 0, started: false, pub: isPub, ts: Date.now() };
+    if (extra) Object.assign(this.info, extra); /* mis. dunia buatan: world:true, seed, max */
+    if (extra && extra.world) this.started = true; /* dunia berjalan terus; pemain keluar/masuk kapan saja */
     await this._subAll();
     this._announce();
     this._publishInfo();
@@ -242,8 +245,10 @@ export class Net {
     await new Promise((r) => setTimeout(r, 1300));
     const inf = this.info;
     if (!inf || Date.now() - (inf.ts || 0) > STALE) { this.close(); throw new Error('Room tidak ditemukan atau password salah.'); }
-    if (inf.started) { this.close(); throw new Error('Permainan di room ini sudah dimulai.'); }
-    if (this.roster.size > MAXP) { this.close(); throw new Error('Room sudah penuh.'); }
+    if (inf.started && !inf.world) { this.close(); throw new Error('Permainan di room ini sudah dimulai.'); }
+    if (this.roster.size > (inf.max || MAXP)) { this.close(); throw new Error('Dunia/room sudah penuh.'); }
+    /* dunia buatan pemain: langsung masuk tanpa menunggu host menekan GAS */
+    if (inf.world) this.started = true;
     this._announce();
     this.onLobby(this.players);
   }

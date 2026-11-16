@@ -2,7 +2,8 @@ import './style.css';
 import * as THREE from 'three';
 import { Lobby } from './lobby.js';
 import { Game } from './game.js';
-import { Net, Browse, MAXP, OW_SEED } from './net.js';
+import { Net, Browse, MAXP, OW_SEED, WORLD_MAX } from './net.js';
+import { listWorlds, createWorld, deleteWorld, MAX_WORLDS } from './worlds.js';
 import { Audio } from './audio.js';
 import { SKINS, drawPreview } from './chars.js';
 import { initTextures } from './textures.js';
@@ -52,7 +53,7 @@ let net = null;
 let inRoom = false;
 let mode = 'none';
 
-const SCREENS = ['sLoad', 'sIntro', 'sLobby', 'sOnline', 'sCreate', 'sFind', 'sRoom', 'hud'];
+const SCREENS = ['sLoad', 'sIntro', 'sLobby', 'sWorlds', 'sNewWorld', 'sOnline', 'sCreate', 'sFind', 'sRoom', 'hud'];
 let browse = null;
 function stopBrowse() {
   if (browse) { browse.close(); browse = null; }
@@ -449,7 +450,97 @@ function renderVault() {
 $('lbSet').onclick = openSettings;
 $('lbVault').onclick = () => { renderVault(); $('mVault').classList.add('show'); };
 $('vaultClose').onclick = () => $('mVault').classList.remove('show');
-$('btnOffline').onclick = () => startGame({ online: false });
+
+/* ================= DUNIA SAYA ================= */
+const dateTxt = (t) => { try { return new Date(t).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }); } catch (e) { return ''; } };
+
+function openWorlds() {
+  show('sWorlds');
+  $('wlOpen').checked = settings.openWorld !== false;
+  renderWorlds();
+}
+
+function renderWorlds() {
+  const w = $('worldList');
+  const list = listWorlds();
+  w.innerHTML = '';
+  $('wlCount').textContent = list.length + '/' + MAX_WORLDS;
+  if (!list.length) {
+    w.innerHTML = '<div class="roomEmpty">Belum ada dunia.<br>Tekan <b>Buat Dunia</b> untuk mulai!</div>';
+    return;
+  }
+  for (const wd of list) {
+    const row = document.createElement('div');
+    row.className = 'worldRow';
+    const nm = document.createElement('b');
+    nm.textContent = '🌍 ' + wd.name;
+    const sm = document.createElement('small');
+    sm.textContent = 'Hari ' + (wd.day || 1) + ' · dibuat ' + dateTxt(wd.created);
+    nm.appendChild(sm);
+    const play = document.createElement('button');
+    play.className = 'btn small';
+    play.textContent = '▶ Play';
+    play.onclick = () => playWorld(wd);
+    const del = document.createElement('button');
+    del.className = 'btn small danger';
+    del.textContent = '🗑️';
+    let armed = 0;
+    del.onclick = () => {
+      if (!armed) {
+        armed = setTimeout(() => { armed = 0; del.textContent = '🗑️'; }, 3000);
+        del.textContent = 'Yakin?';
+        return;
+      }
+      clearTimeout(armed);
+      deleteWorld(wd.id);
+      renderWorlds();
+      flash('Dunia "' + wd.name + '" dihapus');
+    };
+    row.append(nm, play, del);
+    w.appendChild(row);
+  }
+}
+
+$('btnWorlds').onclick = openWorlds;
+$('wlBack').onclick = () => show('sLobby');
+$('wlOpen').onchange = (e) => { settings.openWorld = e.target.checked; store.set('ps_settings', settings); };
+$('wlNew').onclick = () => {
+  $('nwMsg').textContent = '';
+  $('nwName').value = '';
+  show('sNewWorld');
+  setTimeout(() => { try { $('nwName').focus(); } catch (e) { /* abaikan */ } }, 60);
+};
+$('nwBack').onclick = openWorlds;
+function submitNewWorld() {
+  const n = $('nwName').value.trim();
+  if (n.length < 2) { $('nwMsg').textContent = 'Nama dunia minimal 2 huruf.'; return; }
+  let wd;
+  try { wd = createWorld(n); } catch (e) { $('nwMsg').textContent = e.message; return; }
+  playWorld(wd);
+}
+$('nwGo').onclick = submitNewWorld;
+$('nwName').onkeydown = (e) => { if (e.key === 'Enter') submitNewWorld(); };
+
+/* main di dunia sendiri; kalau diizinkan, dunia dibuka agar pemain lain bisa masuk */
+function playWorld(wd) {
+  startGame({ online: false, world: wd, host: settings.openWorld !== false });
+}
+
+async function hostWorldInBackground(g, wd) {
+  const n = new Net();
+  try {
+    await n.host(wd.name, '', myInfo(), { world: true, seed: wd.seed, max: WORLD_MAX });
+  } catch (e) {
+    n.close();
+    if (game === g) flash('Dunia dimainkan offline (' + (e.message || 'tidak ada internet') + ')');
+    return;
+  }
+  if (game !== g) { n.close(); return; }
+  net = n;
+  n.onMsg = (m) => { try { g.onNet(m); } catch (er) { showErr(er.message); } };
+  n.onClosed = () => {};
+  g.attachNet(n);
+}
 
 /* ================= ONLINE ================= */
 const myInfo = () => ({ name: account.name, skin: skinId });
@@ -459,13 +550,13 @@ function renderRoomList(list) {
   w.innerHTML = '';
   $('onStatus').textContent = list.length ? list.length + ' room aktif' : 'Online ✓';
   if (!list.length) {
-    w.innerHTML = '<div class="roomEmpty">Belum ada room publik.<br>Buat room pertama, atau main di Open World!</div>';
+    w.innerHTML = '<div class="roomEmpty">Belum ada room/dunia publik.<br>Buat dunia sendiri, buat room, atau main di Open World!</div>';
     return;
   }
   for (const r of list) {
     const el = document.createElement('div');
     el.className = 'roomRow';
-    el.innerHTML = `<b>${esc(r.name)}<small>Host: ${esc(r.hostName || '?')}</small></b><em>${r.n || 1}/${r.max || MAXP}</em>`;
+    el.innerHTML = `<b>${r.world ? '<span class="wtag">🌍</span>' : ''}${esc(r.name)}<small>${r.world ? 'Dunia' : 'Room'} · Host: ${esc(r.hostName || '?')}</small></b><em>${r.n || 1}/${r.max || MAXP}</em>`;
     el.onclick = () => joinFromList(r);
     w.appendChild(el);
   }
@@ -572,6 +663,7 @@ async function joinPrivate() {
   }
   net = n;
   msg.textContent = '';
+  if (n.info && n.info.world) { startGame({ online: true, seed: n.info.seed, joinWorld: true }); return; }
   setupRoom(room + ' 🔒', false);
 }
 
@@ -592,6 +684,7 @@ async function joinFromList(r) {
   }
   joining = false;
   net = n;
+  if (n.info && n.info.world) { startGame({ online: true, seed: n.info.seed, joinWorld: true }); return; }
   setupRoom(r.name, false);
 }
 
@@ -636,6 +729,7 @@ async function startGame(o) {
   const g = new Game(renderer, settings, {
     online: !!o.online,
     net: o.online ? net : null,
+    world: o.world || null,
     seed: o.seed,
     players: o.players,
     open: !!o.open,
@@ -657,11 +751,13 @@ async function startGame(o) {
   show('hud');
   if (net) {
     net.onMsg = (m) => { try { g.onNet(m); } catch (e) { showErr(e.message); } };
-    net.onClosed = () => {};
+    /* masuk ke dunia orang lain: kalau host menutup dunia, keluar */
+    net.onClosed = o.joinWorld ? () => { flash('Host menutup dunia'); if (game === g) exitGame(); } : () => {};
   }
   g.begin();
   window.__game = g;
   mode = 'game';
+  if (o.world && o.host) hostWorldInBackground(g, o.world);
 }
 
 function exitGame() {
@@ -708,7 +804,7 @@ window.addEventListener('resize', () => {
 });
 window.addEventListener('contextmenu', (e) => e.preventDefault());
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && game && !game.online) game.save();
+  if (document.hidden && game && game.persist) game.save();
 });
 
 /* ================= BOOT ================= */

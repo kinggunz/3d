@@ -52,9 +52,38 @@
       <div class="bottomRight">
         <div class="startLabel">MULAI</div>
         <button id="btnOnline" class="btn modeBtn on">🌐 Online</button>
-        <button id="btnOffline" class="btn modeBtn off">📴 Offline</button>
+        <button id="btnWorlds" class="btn modeBtn off">🌍 Buat Dunia</button>
       </div>
       <small class="credit">by Gunz Developer</small>
+    </div>
+
+    <!-- DUNIA SAYA -->
+    <div id="sWorlds" class="screen shade">
+      <button id="wlBack" class="btn back">‹ Kembali</button>
+      <div class="onWrap">
+        <div class="onLeft">
+          <h2 class="pageTitle">🌍 Dunia Saya</h2>
+          <button id="wlNew" class="bigRow"><span>➕</span><div><b>Buat Dunia</b><i>Dunia baru dengan nama sendiri</i></div></button>
+          <label class="openToggle"><input id="wlOpen" type="checkbox" checked /> <span>🌐 Izinkan pemain lain masuk ke duniaku (butuh internet)</span></label>
+          <small class="hint">Saat dunia dimainkan &amp; terbuka, dunia muncul di daftar <b>Room Global</b> (menu Online) dengan ikon 🌍. Temanmu tinggal klik untuk masuk.</small>
+        </div>
+        <div class="onRight">
+          <div class="listHead"><b>Dunia yang dibuat</b><span id="wlCount"></span></div>
+          <div id="worldList" class="roomList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sNewWorld" class="screen shade">
+      <button id="nwBack" class="btn back">‹ Kembali</button>
+      <div class="center">
+        <div class="formCard">
+          <h2>Buat Dunia</h2>
+          <input id="nwName" maxlength="16" placeholder="Nama dunia" autocomplete="off" />
+          <button id="nwGo" class="btn big">▶ Play</button>
+          <div id="nwMsg" class="msg"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ONLINE -->

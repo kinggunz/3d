@@ -270,3 +270,12 @@ input[type='range'] { padding: 0; width: 180px; accent-color: var(--acc); }
 #hud.hudEditing #hotbar:empty::before { content: '✊'; padding: 0 14px; }
 #hud.hudEditing #chatFeed:empty::before { content: '💬 pesan chat tampil di sini'; font-size: 12px; background: var(--dark); padding: 3px 10px; border-radius: 10px; }
 @media (max-height: 420px) { .hotbar { max-width: min(520px, calc(100vw - 400px * var(--hs))); } }
+
+/* dunia saya */
+.openToggle { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: var(--dark); border: 2px solid rgba(255, 255, 255, 0.25); font-size: 13px; font-weight: 700; cursor: pointer; touch-action: manipulation; }
+.openToggle input { width: 22px; height: 22px; padding: 0; margin: 0; flex: 0 0 auto; accent-color: var(--acc); touch-action: manipulation; }
+.worldRow { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.08); }
+.worldRow b { flex: 1; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.worldRow b small { display: block; opacity: 0.7; font-size: 11px; font-weight: 400; }
+.worldRow .btn.small { margin: 0; padding: 9px 14px; font-size: 14px; flex: 0 0 auto; }
+.roomRow .wtag { font-size: 18px; margin-right: 2px; }

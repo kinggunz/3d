@@ -841,7 +841,7 @@ export const actionsMixin = {
     this.fishCancel();
     this.act = false;
     if (this.crouch) { this.crouch = false; $('btnCrouch').classList.remove('on'); }
-    if (!this.online) {
+    if (!this.mp()) {
       this.sleeping = true;
       Audio.sfx('sleep');
       const f = $('fade');
@@ -912,7 +912,7 @@ export const actionsMixin = {
   },
 
   updateSleep(dt) {
-    if (!this.sleeping || !this.online) return;
+    if (!this.sleeping || !this.sleepBed || !this.online) return;
     if (!this.isNight()) { this.wake(false); return; }
     this.sleepMsgT -= dt;
     if (this.sleepMsgT <= 0) {

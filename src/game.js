@@ -10,12 +10,9 @@ import { Vessel, vesselMixin } from './vessel.js';
 import { Mine, MINE_Y, findCaves, makeEntrance } from './mine.js';
 import { HudEditor } from './hudedit.js';
 import { actionsMixin } from './actions.js';
+import { loadSave, writeSave } from './worlds.js';
 
 const $ = (id) => document.getElementById(id);
-export const SAVE_KEY = 'ps_save_v1';
-export const hasSave = () => {
-  try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
-};
 export { BUILD };
 const DAYLEN = 360;
 
@@ -35,6 +32,8 @@ export class Game {
     this.o = opts;
     this.online = !!opts.online;
     this.net = opts.net || null;
+    this.world = opts.world || null; /* dunia buatan sendiri (disimpan) */
+    this.persist = !!opts.world;
     this.scene = new THREE.Scene();
     this.cam = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 1300);
     this.cam.rotation.order = 'YXZ';
@@ -130,10 +129,8 @@ export class Game {
   /* ================= LOAD ================= */
   async load(progress) {
     let saved = null;
-    if (!this.online) {
-      try { saved = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { saved = null; }
-    }
-    this.seed = this.online ? this.o.seed : saved ? saved.seed : (Math.random() * 1e9) | 0;
+    if (this.persist) saved = loadSave(this.world.id);
+    this.seed = this.persist ? this.world.seed : this.o.seed || (Math.random() * 1e9) | 0;
     this.saved = saved;
     const ultra = this.set.gfx === 'ultra';
     const steps = [
@@ -287,8 +284,8 @@ export class Game {
     $('chatFeed').innerHTML = '';
     $('chatBar').classList.remove('show');
     $('voiceTag').textContent = '';
-    if (this.online) $('pauseSave').style.display = 'none';
-    else $('pauseSave').style.display = '';
+    $('pauseSave').style.display = this.persist ? '' : 'none';
+    $('pauseExit').innerHTML = this.persist ? 'Simpan &amp; Keluar' : 'Keluar';
     this.toast('Selamat datang, ' + (this.o.name || 'Santay') + '!');
     this.updateQuest(true);
     Audio.music('game');
@@ -297,7 +294,21 @@ export class Game {
       this.net.send({ t: 'req' });
       this.initVoice();
     }
+    if (this.persist) this.save();
   }
+
+  /* dunia sendiri: jaringan baru tersambung di belakang layar (pemain lain bisa masuk) */
+  attachNet(net) {
+    if (this.net || !this.running) return;
+    this.net = net;
+    this.online = true;
+    $('hud').classList.add('online');
+    this.initVoice();
+    this.toast('🌐 Dunia terbuka — pemain lain bisa masuk');
+  }
+
+  /* bekukan dunia saat jeda hanya bila tidak ada pemain lain */
+  mp() { return this.online && (!this.persist || this.remotes.size > 0); }
 
   /* ================= MISI ================= */
   questList() {
@@ -525,8 +536,12 @@ export class Game {
       else if (e.code === 'KeyR') this.rot = (this.rot + 1) % 4;
       else if (e.code === 'KeyV') this.toggleMic();
       else if (e.code === 'Enter' || e.code === 'KeyT') { e.preventDefault(); this.openChat(); }
-      else if (e.code === 'KeyI' || e.code === 'Tab') { e.preventDefault(); this.openBag(); }
-      else if (e.code === 'Escape') this.paused ? this.closePause() : this.openPause();
+      else if (e.code === 'KeyI' || e.code === 'Tab') { e.preventDefault(); if ($('panelBag').classList.contains('show')) this.closeBag(); else this.openBag(); }
+      else if (e.code === 'Escape') {
+        if ($('panelBag').classList.contains('show')) this.closeBag();
+        else if ($('panelPause').classList.contains('show')) this.closePause();
+        else this.openPause();
+      }
       else if (e.code.startsWith('Digit')) {
         const i = parseInt(e.code.slice(5), 10) - 1;
         if (this.build) {
@@ -642,16 +657,21 @@ export class Game {
   costText(cost) { return costText(cost); }
 
   openBag() {
-    this.renderBag();
+    if (this.dead || this.hudEditing) return;
+    if (this.build) this.toggleBuild();
+    this.fishCancel();
+    this.act = false;
     $('panelBag').classList.add('show');
-    this.paused = !this.online;
+    this.renderBag(); /* panel harus sudah tampil, kalau tidak render dilewati */
+    this.paused = !this.mp();
+    if (document.exitPointerLock) document.exitPointerLock();
   }
 
   closeBag() { $('panelBag').classList.remove('show'); this.paused = false; }
 
   openPause() {
     $('panelPause').classList.add('show');
-    this.paused = !this.online;
+    this.paused = !this.mp();
     if (document.exitPointerLock) document.exitPointerLock();
   }
 
@@ -660,7 +680,7 @@ export class Game {
   startHudEdit() {
     $('panelPause').classList.remove('show');
     this.hudEditing = true;
-    this.paused = !this.online;
+    this.paused = !this.mp();
     this.inp.mx = 0; this.inp.my = 0;
     this.hud.start(() => {
       this.hudEditing = false;
@@ -1232,7 +1252,7 @@ export class Game {
 
   /* ================= SAVE ================= */
   save() {
-    if (this.online) return;
+    if (!this.persist) return;
     const p = this.p;
     const s = {
       seed: this.seed, t: this.t, day: this.day,
@@ -1246,7 +1266,7 @@ export class Game {
       stats: this.stats,
       quest: this.quest,
     };
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) { /* penuh */ }
+    writeSave(this.world.id, s, this.day);
   }
 
   exit() {
@@ -1257,7 +1277,7 @@ export class Game {
   /* ================= LOOP ================= */
   update(dt) {
     if (!this.running) return;
-    const frozen = this.paused && !this.online;
+    const frozen = this.paused && !this.mp();
     if (!frozen) {
       this.t += dt / DAYLEN;
       if (this.t >= 1) { this.t -= 1; this.day++; }
@@ -1340,7 +1360,7 @@ export class Game {
         this.net.send(m);
       }
     }
-    if (!this.online) {
+    if (this.persist) {
       this.saveT += dt;
       if (this.saveT > 20) { this.saveT = 0; this.save(); }
     }

@@ -8,7 +8,7 @@ Game survival 3D (Three.js) -> APK via Capacitor + GitHub Actions.
 3. Unduh `PetualanganSantay.apk` dari **Artifacts** atau **Releases**.
 
 ## Fitur
-- Offline: dunia tersimpan otomatis. Online: Open World (ketemu pemain lain otomatis), daftar room global (klik langsung masuk), room private (nama+password).
+- **Buat Dunia**: buat banyak dunia sendiri (beri nama → Play), tersimpan otomatis per dunia. Dunia yang dimainkan otomatis terbuka di daftar Room Global (ikon 🌍) sehingga pemain lain bisa masuk (bisa dimatikan di layar Dunia Saya). Online: Open World (ketemu pemain lain otomatis), daftar room global (klik langsung masuk), room private (nama+password).
 - Online memakai broker MQTT publik (butuh internet), tanpa server sendiri.
 - Musik & efek suara dibuat prosedural (tanpa file audio). Atur di Pengaturan.
 
