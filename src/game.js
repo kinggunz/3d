@@ -32,7 +32,7 @@ export class Game {
     this.o = opts;
     this.online = !!opts.online;
     this.net = opts.net || null;
-    this.world = opts.world || null; /* dunia buatan sendiri (disimpan) */
+    this.wdata = opts.world || null; /* dunia buatan sendiri (disimpan) */
     this.persist = !!opts.world;
     this.scene = new THREE.Scene();
     this.cam = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 1300);
@@ -129,8 +129,8 @@ export class Game {
   /* ================= LOAD ================= */
   async load(progress) {
     let saved = null;
-    if (this.persist) saved = loadSave(this.world.id);
-    this.seed = this.persist ? this.world.seed : this.o.seed || (Math.random() * 1e9) | 0;
+    if (this.persist) saved = loadSave(this.wdata.id);
+    this.seed = this.persist ? this.wdata.seed : this.o.seed || (Math.random() * 1e9) | 0;
     this.saved = saved;
     const ultra = this.set.gfx === 'ultra';
     const steps = [
@@ -1266,7 +1266,7 @@ export class Game {
       stats: this.stats,
       quest: this.quest,
     };
-    writeSave(this.world.id, s, this.day);
+    writeSave(this.wdata.id, s, this.day);
   }
 
   exit() {
