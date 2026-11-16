@@ -67,6 +67,37 @@ export function initTextures() {
     }
   });
 
+
+  T.rock = ct(128, 128, (g, w, h) => {
+    g.fillStyle = '#4a4a50';
+    g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 420; i++) {
+      const v = 50 + Math.floor(Math.random() * 60);
+      g.fillStyle = `rgba(${v},${v},${v + 6},0.55)`;
+      const s = 2 + Math.random() * 14;
+      g.fillRect(Math.random() * w, Math.random() * h, s, s * (0.4 + Math.random()));
+    }
+    g.strokeStyle = 'rgba(15,15,18,.55)';
+    g.lineWidth = 2;
+    for (let i = 0; i < 9; i++) {
+      g.beginPath();
+      let x = Math.random() * w, y = Math.random() * h;
+      g.moveTo(x, y);
+      for (let k = 0; k < 4; k++) { x += (Math.random() - 0.5) * 40; y += (Math.random() - 0.5) * 40; g.lineTo(x, y); }
+      g.stroke();
+    }
+  });
+
+  T.floor = ct(128, 128, (g, w, h) => {
+    g.fillStyle = '#3b3631';
+    g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 500; i++) {
+      const v = 40 + Math.floor(Math.random() * 40);
+      g.fillStyle = `rgba(${v + 8},${v + 2},${v - 4},0.5)`;
+      g.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 6, 2 + Math.random() * 6);
+    }
+  });
+
   T.water = ct(256, 256, (g, w, h) => {
     g.fillStyle = '#bfe3f7';
     g.fillRect(0, 0, w, h);

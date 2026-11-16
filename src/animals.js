@@ -89,6 +89,9 @@ export class Animals {
     this.list = [];
     this.birds = [];
     this.time = 0;
+    this.cull = 120;
+    this.hidden = false;
+    this.birdsOn = true;
     const cnt = {
       rabbit: ultra ? 18 : 14,
       deer: ultra ? 12 : 9,
@@ -112,6 +115,20 @@ export class Animals {
       scene.add(g);
       this.birds.push(b);
     }
+  }
+
+  setCull(r) { this.cull = r; }
+
+  setBirds(on) {
+    this.birdsOn = on;
+    for (const b of this.birds) b.g.visible = on;
+  }
+
+  /* sembunyikan semua hewan (saat di dalam goa) */
+  setHidden(on) {
+    this.hidden = on;
+    for (const a of this.list) if (!a.dead) a.g.visible = !on;
+    for (const b of this.birds) b.g.visible = !on && this.birdsOn;
   }
 
   pt(minH, maxH) {
@@ -155,6 +172,7 @@ export class Animals {
 
   update(dt, px, pz, py, night, hurt) {
     this.time += dt;
+    if (this.hidden) return;
     const sample = this.hf.sample;
     for (const a of this.list) {
       if (a.dead) {
@@ -177,6 +195,9 @@ export class Animals {
       const dx = px - a.x, dz = pz - a.z;
       const d = Math.hypot(dx, dz) || 0.001;
       let sp = 0, dirx = 0, dirz = 0;
+      /* jauh dari pemain: sembunyikan & lewati AI (hemat draw call) */
+      if (d > this.cull) { if (a.g.visible) a.g.visible = false; continue; }
+      if (!a.g.visible) a.g.visible = true;
 
       if (a.type === 'fish') {
         a.timer -= dt;
@@ -271,6 +292,7 @@ export class Animals {
       }
     }
 
+    if (!this.birdsOn) return;
     for (const b of this.birds) {
       b.ang += b.spd * dt;
       const x = b.cx + Math.cos(b.ang) * b.rad;

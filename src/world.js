@@ -186,6 +186,12 @@ export function makeSky(scene) {
 
   const api = {
     sun,
+    moon,
+    hemi,
+    sunMesh,
+    moonMesh,
+    stars,
+    clouds,
     day: 1,
     fogNear: 60,
     fogFar: 240,
@@ -481,23 +487,51 @@ export function makeNature(hf, seed, scene) {
   };
 
   let grassMesh = null;
+  const regrowing = [];
+  const geoHi = { trunk: trunk.geometry, crown: crown.geometry, leaf: leaf.geometry, bushes: bushes.geometry };
+  const geoLo = {
+    trunk: new THREE.CylinderGeometry(0.2, 0.32, 1, 5).translate(0, 0.5, 0),
+    crown: new THREE.ConeGeometry(1, 1, 5).translate(0, 0.5, 0),
+    leaf: new THREE.IcosahedronGeometry(1, 0),
+    bushes: new THREE.IcosahedronGeometry(1, 0),
+  };
+  let lowOn = false;
   const api = {
     nodes,
     near,
+    /* mode ringan (grafik Smooth): geometri daun/pohon lebih sederhana */
+    setLow(on) {
+      if (on === lowOn) return;
+      lowOn = on;
+      const g = on ? geoLo : geoHi;
+      trunk.geometry = g.trunk;
+      crown.geometry = g.crown;
+      leaf.geometry = g.leaf;
+      bushes.geometry = g.bushes;
+      flowers.visible = !on;
+      stems.visible = !on;
+    },
+    setVisible(on) {
+      for (const m of meshes) m.visible = on && !((m === flowers || m === stems) && lowOn);
+      if (grassMesh && !on) grassMesh.visible = false;
+    },
     kill(n) {
       n.alive = false;
       setVisible(n, false);
-      if (n.type === 'bush') n.regrow = 100;
+      if (n.type === 'bush') {
+        n.regrow = 100;
+        if (!regrowing.includes(n)) regrowing.push(n);
+      }
     },
     tick(dt) {
-      for (const n of nodes) {
-        if (n.type === 'bush' && !n.alive && n.regrow > 0) {
-          n.regrow -= dt;
-          if (n.regrow <= 0) {
-            n.alive = true;
-            n.hp = n.max;
-            setVisible(n, true);
-          }
+      for (let i = regrowing.length - 1; i >= 0; i--) {
+        const n = regrowing[i];
+        n.regrow -= dt;
+        if (n.regrow <= 0) {
+          n.alive = true;
+          n.hp = n.max;
+          setVisible(n, true);
+          regrowing.splice(i, 1);
         }
       }
     },

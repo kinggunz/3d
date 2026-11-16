@@ -31,7 +31,7 @@ function showErr(msg) {
 errBox.addEventListener('pointerdown', () => { errBox.style.display = 'none'; });
 window.addEventListener('error', (e) => showErr((e.message || 'unknown') + (e.lineno ? ' @' + e.lineno : '')));
 window.addEventListener('unhandledrejection', (e) => showErr((e.reason && e.reason.message) || String(e.reason)));
-document.addEventListener('pointerdown', () => Audio.unlock(), true);
+document.addEventListener('pointerdown', () => { Audio.unlock(); if (game && game.voice) game.voice.resume(); }, true);
 document.addEventListener('click', (e) => {
   if (e.target.closest && e.target.closest('.btn, .bigRow, .iconBtn, .seg button, .vItem, .roomRow')) Audio.sfx('click');
 }, true);
@@ -381,6 +381,7 @@ async function intro() {
 
 /* ================= PENGATURAN ================= */
 function refreshSettingsUI() {
+  $('gfxSmooth').classList.toggle('on', settings.gfx === 'smooth');
   $('gfxStd').classList.toggle('on', settings.gfx === 'standar');
   $('gfxUlt').classList.toggle('on', settings.gfx === 'ultra');
   for (const f of [30, 60, 120]) $('fps' + f).classList.toggle('on', settings.fps === f);
@@ -397,6 +398,7 @@ function openSettings() {
   refreshSettingsUI();
   $('mSet').classList.add('show');
 }
+$('gfxSmooth').onclick = () => { settings.gfx = 'smooth'; saveSettings(); };
 $('gfxStd').onclick = () => { settings.gfx = 'standar'; saveSettings(); };
 $('gfxUlt').onclick = () => { settings.gfx = 'ultra'; saveSettings(); };
 for (const f of [30, 60, 120]) $('fps' + f).onclick = () => { settings.fps = f; saveSettings(); };
@@ -658,6 +660,7 @@ async function startGame(o) {
     net.onClosed = () => {};
   }
   g.begin();
+  window.__game = g;
   mode = 'game';
 }
 
@@ -671,11 +674,18 @@ function exitGame() {
 
 /* ================= LOOP ================= */
 let last = 0;
+let rawLast = 0;
+let refreshMs = 33;
 function frame(ts) {
   requestAnimationFrame(frame);
+  /* perkirakan refresh rate layar (interval rAF terkecil) untuk resolusi dinamis */
+  const raw = ts - rawLast;
+  rawLast = ts;
+  if (raw > 3 && raw < 60) refreshMs = Math.min(refreshMs, raw);
   const minDt = 1000 / settings.fps;
   if (ts - last < minDt - 2) return;
-  const dt = Math.min((ts - last) / 1000, 0.1);
+  const frameMs = ts - last;
+  const dt = Math.min(frameMs / 1000, 0.1);
   last = ts;
   try {
     if (mode === 'lobby' && lobby) {
@@ -684,6 +694,7 @@ function frame(ts) {
     } else if (mode === 'game' && game) {
       game.update(dt);
       game.render();
+      if (frameMs < 250) game.frameStat(frameMs, Math.max(minDt, refreshMs));
     }
   } catch (e) {
     showErr((e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e));

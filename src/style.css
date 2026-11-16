@@ -201,3 +201,72 @@ input[type='range'] { padding: 0; width: 180px; accent-color: var(--acc); }
 .tbar { width: 90px; height: 7px; margin: 3px auto 0; border-radius: 5px; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.5); overflow: hidden; }
 .tbar i { display: block; height: 100%; background: linear-gradient(#ffc45a, #e2672a); width: 100%; }
 #errBox { position: fixed; left: 8px; right: 8px; top: 8px; z-index: 99; padding: 8px 12px; border-radius: 10px; background: rgba(150, 20, 20, 0.92); color: #fff; font: 12px/1.35 monospace; max-height: 40vh; overflow: auto; display: none; pointer-events: auto; user-select: text; -webkit-user-select: text; touch-action: pan-y; }
+
+/* ================= v2: HUD responsif, hotbar, chat, editor HUD ================= */
+:root { --hs: 1; --hudop: 1; }
+.joy, .rbtn, .iconBtn.topBtn, .hotbar { opacity: var(--hudop); }
+.rbtn.down, .iconBtn.down { filter: brightness(1.45); box-shadow: 0 0 0 3px rgba(255, 220, 120, 0.8); }
+.joy { left: calc(26px * var(--hs) + var(--sal)); bottom: calc(24px * var(--hs) + var(--sab)); width: calc(140px * var(--hs)); height: calc(140px * var(--hs)); }
+.knob { width: calc(58px * var(--hs)); height: calc(58px * var(--hs)); margin: calc(-29px * var(--hs)); }
+.rbtn { font-size: calc(26px * var(--hs)); }
+.rbtn.act { right: calc(24px * var(--hs) + var(--sar)); bottom: calc(28px * var(--hs) + var(--sab)); width: calc(90px * var(--hs)); height: calc(90px * var(--hs)); font-size: calc(38px * var(--hs)); }
+.rbtn.jump { right: calc(128px * var(--hs) + var(--sar)); bottom: calc(22px * var(--hs) + var(--sab)); width: calc(66px * var(--hs)); height: calc(66px * var(--hs)); }
+.rbtn.crouch { right: calc(136px * var(--hs) + var(--sar)); bottom: calc(98px * var(--hs) + var(--sab)); width: calc(54px * var(--hs)); height: calc(54px * var(--hs)); font-size: calc(24px * var(--hs)); }
+.rbtn.crouch.on, .rbtn.mic.on { background: rgba(64, 200, 110, 0.8); }
+.rbtn.build { right: calc(30px * var(--hs) + var(--sar)); bottom: calc(128px * var(--hs) + var(--sab)); width: calc(56px * var(--hs)); height: calc(56px * var(--hs)); }
+.rbtn.eat { right: calc(96px * var(--hs) + var(--sar)); bottom: calc(160px * var(--hs) + var(--sab)); width: calc(50px * var(--hs)); height: calc(50px * var(--hs)); }
+.rbtn.ctx { right: calc(212px * var(--hs) + var(--sar)); bottom: calc(62px * var(--hs) + var(--sab)); height: calc(50px * var(--hs)); font-size: calc(16px * var(--hs)); border-radius: 30px; padding: 0 calc(18px * var(--hs)); }
+.rbtn.mic { right: calc(12px * var(--hs) + var(--sar)); top: calc(66px * var(--hs) + var(--sat)); width: calc(46px * var(--hs)); height: calc(46px * var(--hs)); font-size: calc(22px * var(--hs)); }
+.rbtn.chat { right: calc(66px * var(--hs) + var(--sar)); top: calc(66px * var(--hs) + var(--sat)); width: calc(46px * var(--hs)); height: calc(46px * var(--hs)); font-size: calc(22px * var(--hs)); }
+.topBtn { position: absolute; top: calc(10px * var(--hs) + var(--sat)); width: calc(46px * var(--hs)); height: calc(46px * var(--hs)); font-size: calc(22px * var(--hs)); }
+.topBtn.pause { right: calc(12px * var(--hs) + var(--sar)); }
+.topBtn.bag { right: calc(66px * var(--hs) + var(--sar)); }
+#hud:not(.online) .onlineOnly { display: none; }
+.quest { top: calc(80px * var(--hs) + var(--sat)); }
+.questHint { color: #ffd36b; margin-top: 2px; }
+.questHint:empty { display: none; }
+.voiceTag { position: absolute; left: 50%; top: calc(40px + var(--sat)); transform: translateX(-50%); font-size: 12px; font-weight: 800; color: #8fe0a0; text-shadow: 0 1px 4px #000; }
+.hotbar { position: absolute; left: 50%; bottom: calc(8px + var(--sab)); transform: translateX(-50%); display: flex; gap: 6px; max-width: min(560px, calc(100vw - 440px * var(--hs))); overflow-x: auto; padding: 4px 6px; border-radius: 16px; background: var(--dark); touch-action: pan-x; scrollbar-width: none; }
+.hotbar::-webkit-scrollbar { display: none; }
+.hotbar.gone { display: none; }
+.hbItem { position: relative; flex: 0 0 auto; width: calc(46px * var(--hs)); height: calc(46px * var(--hs)); border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.3); background: rgba(20, 30, 60, 0.7); color: #fff; font-size: calc(24px * var(--hs)); display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; touch-action: manipulation; }
+.hbItem.sel { border-color: var(--acc); background: rgba(240, 160, 48, 0.4); }
+.hbItem i { position: absolute; right: 3px; bottom: 0; font-size: 11px; font-style: normal; font-weight: 800; }
+.buildBar { bottom: calc(8px + var(--sab)); }
+.chatFeed { position: absolute; left: 50%; bottom: calc(66px * var(--hs) + var(--sab)); transform: translateX(-50%); width: min(380px, calc(100vw - 470px)); display: flex; flex-direction: column; gap: 3px; }
+.chatLine { background: var(--dark); border-radius: 10px; padding: 3px 10px; font-size: 12px; word-break: break-word; animation: fadeUp 0.2s both; }
+.chatLine b { color: #ffd36b; }
+.chatLine.me b { color: #8fe0a0; }
+.chatBar { position: absolute; left: 50%; top: calc(44px + var(--sat)); transform: translateX(-50%); display: none; gap: 6px; align-items: center; background: rgba(10, 16, 36, 0.94); padding: 6px 8px; border-radius: 14px; border: 2px solid rgba(255, 255, 255, 0.3); z-index: 8; }
+.chatBar.show { display: flex; }
+.chatBar input { width: min(300px, 46vw); padding: 9px 12px; font-size: 15px; user-select: text; -webkit-user-select: text; touch-action: manipulation; border-radius: 10px; border: 2px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); color: #fff; }
+.sleepMsg { position: absolute; inset: 0; background: rgba(0, 0, 24, 0.62); display: none; align-items: flex-start; justify-content: center; padding-top: calc(70px + var(--sat)); font-weight: 800; font-size: 16px; text-align: center; }
+.sleepMsg.show { display: flex; }
+.fade { transition: opacity 0.9s; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; }
+.tabBtn { padding: 7px 12px; border-radius: 10px; border: 2px solid rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.07); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; touch-action: manipulation; }
+.tabBtn.on { background: linear-gradient(#ffc45a, var(--acc2)); color: #2a1500; border-color: transparent; }
+.bagCraft { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 5px; width: 100%; }
+.recipe { display: flex; align-items: center; gap: 8px; padding: 5px 8px; background: rgba(255, 255, 255, 0.07); border-radius: 10px; }
+.recipe b { flex: 1; font-size: 13px; }
+.recipe span { font-size: 12px; }
+.recipe .btn.small { margin: 0; }
+.recipe em { font-style: normal; font-weight: 800; }
+.recipe em.ok { color: #9fe3a8; }
+.recipe em.no { color: #ff9a8a; }
+.xfer { display: flex; flex-wrap: wrap; gap: 2px; align-items: center; }
+.bagList { max-height: 28vh; overflow-y: auto; touch-action: pan-y; }
+.hint { max-width: none; }
+.hudEdit { position: absolute; left: 50%; top: calc(6px + var(--sat)); transform: translateX(-50%); display: none; flex-direction: column; gap: 6px; padding: 8px 12px; border-radius: 14px; background: rgba(10, 16, 36, 0.95); border: 2px solid var(--acc); z-index: 12; font-size: 12px; width: min(560px, 94vw); }
+.hudEdit.show { display: flex; }
+.hudEdit .row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.hudEdit input[type=range] { width: 130px; margin: 0; touch-action: pan-x; vertical-align: middle; }
+.hudEdit .btn.small { margin: 0; }
+#hud.hudEditing .hudEd { outline: 2px dashed rgba(255, 255, 255, 0.6); outline-offset: 2px; pointer-events: auto; opacity: 1; }
+#hud.hudEditing .hudSel { outline: 3px dashed #ffd36b; }
+#hud.hudEditing #btnCtx, #hud.hudEditing #buildBar, #hud.hudEditing .onlineOnly { display: flex; }
+#hud.hudEditing #hotbar.gone { display: flex; }
+#hud.hudEditing #btnCtx:empty::before { content: 'Aksi'; }
+#hud.hudEditing #hotbar:empty::before { content: '✊'; padding: 0 14px; }
+#hud.hudEditing #chatFeed:empty::before { content: '💬 pesan chat tampil di sini'; font-size: 12px; background: var(--dark); padding: 3px 10px; border-radius: 10px; }
+@media (max-height: 420px) { .hotbar { max-width: min(520px, calc(100vw - 400px * var(--hs))); } }

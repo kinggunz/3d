@@ -125,7 +125,7 @@
       <div class="card">
         <h3>⚙️ Pengaturan</h3>
         <div class="row"><label>Grafik</label>
-          <div class="seg"><button id="gfxStd">Standar</button><button id="gfxUlt">Ultra</button></div>
+          <div class="seg"><button id="gfxSmooth">Smooth</button><button id="gfxStd">Standar</button><button id="gfxUlt">Ultra</button></div>
         </div>
         <div class="row"><label>FPS</label>
           <div class="seg"><button id="fps30">30</button><button id="fps60">60</button><button id="fps120">120</button></div>
@@ -151,36 +151,61 @@
         <div class="bar2 water"><span>💧</span><div><i id="barWaterF"></i></div></div>
       </div>
       <div id="clockTxt" class="clock">☀️ 07:00 · Hari 1</div>
-      <div class="topBtns">
-        <button id="btnBag" class="iconBtn pe">🎒</button>
-        <button id="btnPause" class="iconBtn pe">⏸</button>
-      </div>
-      <div id="quest" class="quest"><span id="questTxt"></span></div>
+      <div id="voiceTag" class="voiceTag"></div>
+      <button id="btnBag" class="iconBtn topBtn bag pe">🎒</button>
+      <button id="btnPause" class="iconBtn topBtn pause pe">⏸</button>
+      <button id="btnMic" class="rbtn mic onlineOnly pe">🎤</button>
+      <button id="btnChat" class="rbtn chat onlineOnly pe">💬</button>
+      <div id="quest" class="quest"><span id="questTxt"></span><div id="questHint" class="questHint"></div></div>
       <div class="crosshair"></div>
       <div id="target" class="target"><div id="targetName"></div><div class="tbar"><i id="targetFill"></i></div></div>
       <div id="hurt" class="hurt"></div>
       <div id="toasts" class="toasts"></div>
+      <div id="chatFeed" class="chatFeed onlineOnly"></div>
 
       <div id="joy" class="joy pe"><div id="joyKnob" class="knob"></div></div>
 
       <button id="btnAct" class="rbtn act pe">✊</button>
       <button id="btnJump" class="rbtn jump pe">⤴</button>
+      <button id="btnCrouch" class="rbtn crouch pe">🧎</button>
       <button id="btnBuild" class="rbtn build pe">🏗️</button>
       <button id="btnEat" class="rbtn eat pe">🍖</button>
       <button id="btnCtx" class="rbtn ctx pe"></button>
+
+      <div id="hotbar" class="hotbar pe"></div>
 
       <div id="buildBar" class="buildBar pe">
         <div id="buildItems" class="buildItems"></div>
         <button id="btnRot" class="rbtn rot">🔄</button>
       </div>
 
+      <div id="chatBar" class="chatBar pe">
+        <input id="chatIn" type="text" maxlength="120" placeholder="Ketik pesan..." autocomplete="off" />
+        <button id="chatSend" class="btn small">Kirim</button>
+        <button id="chatClose" class="btn small dim">✕</button>
+      </div>
+
+      <div id="sleepMsg" class="sleepMsg"><div id="sleepMsgTxt">😴 Tidur...</div></div>
       <div id="fade" class="fade"><span>Zzz...</span></div>
       <div id="panelDead" class="deadPanel"><div>Kamu pingsan...<small>Bangkit di titik spawn</small></div></div>
 
+      <div id="hudEdit" class="hudEdit pe">
+        <div class="row2"><b>🎛️ Atur HUD</b><span>Seret tombol untuk memindah · pilih lalu atur ukuran</span></div>
+        <div class="row2"><span id="hudEditName">Pilih tombol</span>
+          <label>Ukuran <input id="hudEditSize" type="range" min="0.5" max="2.2" step="0.05" value="1" disabled /></label>
+          <label>Transparansi <input id="hudEditOp" type="range" min="0.25" max="1" step="0.05" value="1" /></label></div>
+        <div class="row2">
+          <button id="hudEditResetOne" class="btn small dim">Reset tombol ini</button>
+          <button id="hudEditResetAll" class="btn small dim">Reset semua</button>
+          <button id="hudEditDone" class="btn small">Selesai ✓</button>
+        </div>
+      </div>
+
       <div id="panelBag" class="panel pe">
         <div class="card wide">
-          <h3>🎒 Tas</h3>
+          <h3 id="bagTitle">🎒 Tas</h3>
           <div id="bagList" class="bagList"></div>
+          <div id="bagTabs" class="tabs"></div>
           <div id="bagCraft" class="bagCraft"></div>
           <button id="bagClose" class="btn">Tutup</button>
         </div>
@@ -189,6 +214,7 @@
         <div class="card">
           <h3>Jeda</h3>
           <button id="pauseResume" class="btn big">Lanjut</button>
+          <button id="pauseHud" class="btn">🎛️ Atur HUD</button>
           <button id="pauseSettings" class="btn">⚙️ Pengaturan</button>
           <button id="pauseSave" class="btn">💾 Simpan</button>
           <button id="pauseExit" class="btn danger">Simpan &amp; Keluar</button>
