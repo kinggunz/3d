@@ -279,3 +279,60 @@ input[type='range'] { padding: 0; width: 180px; accent-color: var(--acc); }
 .worldRow b small { display: block; opacity: 0.7; font-size: 11px; font-weight: 400; }
 .worldRow .btn.small { margin: 0; padding: 9px 14px; font-size: 14px; flex: 0 0 auto; }
 .roomRow .wtag { font-size: 18px; margin-right: 2px; }
+
+/* ikon canvas */
+.ic { width: 1.2em; height: 1.2em; vertical-align: middle; pointer-events: none; image-rendering: auto; flex: 0 0 auto; }
+.ic.sm { width: 1em; height: 1em; margin-left: 2px; }
+.lb { margin-left: 6px; }
+.rbtn .ic, .iconBtn .ic { width: 62%; height: 62%; margin: 0; }
+.rbtn.act .ic { width: 66%; height: 66%; }
+.rbtn.ctx .ic { width: 28px; height: 28px; }
+.rbtn.ctx { gap: 4px; }
+.rbtn .lb { margin-left: 0; }
+.hbItem .ic { width: 66%; height: 66%; }
+.hbItem i .ic { width: 12px; height: 12px; }
+.bar2 > span .ic, .bar2 > span { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; }
+.bar2 > span .ic { width: 22px; height: 22px; }
+.bItem .ic { width: 32px; height: 32px; }
+.bItem i { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 2px; }
+.bItem i em { font-style: normal; display: inline-flex; align-items: center; }
+.bagItem .ic { width: 26px; height: 26px; }
+.recipe b { display: flex; align-items: center; gap: 6px; }
+.recipe b .ic { width: 24px; height: 24px; }
+.recipe span em { display: inline-flex; align-items: center; margin-right: 4px; }
+.btn .ic { width: 1.25em; height: 1.25em; margin-top: -2px; }
+.btn .lb { margin-left: 8px; }
+.iconBtn .lb { display: none; }
+.pageTitle .ic, .card h3 .ic, .formCard h2 .ic { width: 1.2em; height: 1.2em; margin-right: 6px; margin-left: 0; }
+.bigRow span .ic { width: 38px; height: 38px; }
+.bigRow > span { display: inline-flex; }
+.leftMid { display: flex; flex-direction: column; gap: 10px; }
+.btn.side { position: static; }
+.chip .ic { width: 1.1em; height: 1.1em; }
+.questHint { display: flex; align-items: center; gap: 6px; }
+.questHint .ic { width: 20px; height: 20px; transition: transform 0.12s linear; }
+.questHint.off { display: none; }
+.clock { display: flex; align-items: center; gap: 6px; }
+.clock .ic { width: 20px; height: 20px; }
+.voiceTag .ic { width: 16px; height: 16px; }
+
+/* buku panduan */
+.card.guide { width: min(720px, 94vw); height: min(92vh, 470px); align-items: stretch; overflow: hidden; }
+.card.guide h3 { text-align: center; }
+.guideBody { flex: 1; overflow-y: auto; touch-action: pan-y; padding: 2px 6px 6px 2px; font-size: 14px; line-height: 1.5; min-height: 0; }
+.guideBody h4 { margin: 12px 0 4px; font-size: 16px; color: #ffd36b; }
+.guideBody p { margin: 4px 0; }
+.guideBody ol, .guideBody ul { margin: 4px 0; padding-left: 22px; }
+.guideBody li { margin: 3px 0; }
+.gRow { display: flex; align-items: center; gap: 10px; padding: 6px 8px; margin: 4px 0; border-radius: 10px; background: rgba(255, 255, 255, 0.07); }
+.gRow > .ic { width: 34px; height: 34px; }
+.gRow div { flex: 1; font-size: 13px; }
+.gRow div b { display: block; font-size: 14px; }
+.gRow em { font-style: normal; font-weight: 800; display: inline-flex; align-items: center; margin-right: 6px; }
+.gTip { margin: 8px 0; padding: 8px 10px; border-radius: 10px; background: rgba(255, 196, 90, 0.15); border: 1px solid rgba(255, 196, 90, 0.5); font-size: 13px; }
+.card.guide .tabs { flex: 0 0 auto; }
+.card.guide .tabBtn { padding: 6px 10px; font-size: 12px; }
+.rbtn .ic, .iconBtn .ic, .topBtn .ic { width: 74%; height: 74%; max-width: none; }
+.rbtn.act .ic { width: 70%; height: 70%; }
+.rbtn.ctx .ic { width: 28px; height: 28px; }
+.iconBtn, .topBtn, .rbtn { display: flex; align-items: center; justify-content: center; }

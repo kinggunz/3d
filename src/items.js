@@ -69,6 +69,6 @@ export const CRAFT = [
 export const CRAFT_CATS = ['Bahan', 'Alat', 'Senjata', 'Cahaya', 'Angkut', 'Bangun'];
 
 export const costText = (cost) => {
-  const s = Object.keys(cost).map((k) => `${cost[k]}${ICON[k] || k}`).join(' ');
+  const s = Object.keys(cost).map((k) => `${cost[k]} ${ITEMS[k] || k}`).join(', ');
   return s || 'Gratis';
 };

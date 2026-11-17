@@ -11,6 +11,7 @@ import { Mine, MINE_Y, findCaves, makeEntrance } from './mine.js';
 import { HudEditor } from './hudedit.js';
 import { actionsMixin } from './actions.js';
 import { loadSave, writeSave } from './worlds.js';
+import { ico, costIcons, setIcon, setIconText, iconURL } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
 export { BUILD };
@@ -278,7 +279,8 @@ export class Game {
     this.renderHotbar(true);
     $('btnBuild').classList.remove('on');
     $('buildBar').classList.remove('show');
-    $('btnAct').textContent = '✊';
+    setIcon($('btnAct'), 'fist');
+    $('hintArrow').src = iconURL('arrow');
     $('btnCrouch').classList.remove('on');
     $('btnMic').classList.remove('on');
     $('chatFeed').innerHTML = '';
@@ -304,7 +306,7 @@ export class Game {
     this.online = true;
     $('hud').classList.add('online');
     this.initVoice();
-    this.toast('🌐 Dunia terbuka — pemain lain bisa masuk');
+    this.toast('Dunia terbuka — pemain lain bisa masuk');
   }
 
   /* bekukan dunia saat jeda hanya bila tidak ada pemain lain */
@@ -314,23 +316,23 @@ export class Game {
   questList() {
     const st = this.stats, inv = this.p.inv;
     return [
-      { t: 'Tebang 3 pohon (tahan ✊ di dekat pohon)', ok: () => st.chop >= 3 },
-      { t: 'Kumpulkan batu dari 2 batu besar', ok: () => st.mine >= 2 },
-      { t: 'Buka 🎒 lalu buat Kapak', ok: () => inv.kapak > 0 || inv.kapakbesi > 0 },
-      { t: 'Tekan 🏗️ dan bangun 4 bagian rumah', ok: () => st.built >= 4 },
-      { t: 'Bangun Api Unggun 🔥', ok: () => st.api >= 1 },
-      { t: 'Berburu 1 hewan (kelinci/rusa/ikan)', ok: () => st.hunt >= 1 },
-      { t: 'Masak daging di dekat api (tombol 🔥)', ok: () => st.cook >= 1 },
-      { t: 'Bangun Kasur 🛏️', ok: () => st.bed >= 1 },
-      { t: 'Tidur di kasur saat malam 😴', ok: () => st.sleep >= 1 },
-      { t: 'Buat ⛏️ Beliung di 🎒 (tab Alat) & pegang di hotbar', ok: () => inv.beliung > 0 || inv.beliungbesi > 0 },
-      { t: 'Cari ⛰️ goa di gunung (ikuti panah), tambang 3 bijih/batu bara', ok: () => st.ore >= 3 },
-      { t: 'Gali Tanah 🥄 → bangun 🏭 Tungku → lebur Bijih jadi Besi', ok: () => st.smelt >= 1 },
-      { t: 'Buat 🪣 Ember, isi air di laut, lalu minum', ok: () => st.ember >= 1 },
-      { t: 'Buat 🎣 Pancing & tangkap 1 ikan di laut', ok: () => st.fish >= 1 },
-      { t: 'Bangun ⚓ Dermaga di pantai', ok: () => st.dock >= 1 },
-      { t: 'Rakit kapal: lantai di air + ⚙️ Mesin + 🎡 Setir', ok: () => st.boat >= 1 },
-      { t: 'Berlayar! Dekati setir, tekan 🎡 Kemudi', ok: () => st.sail >= 1 },
+      { t: 'Tebang 3 pohon: dekati pohon lalu TAHAN tombol Serang (kepalan)', ok: () => st.chop >= 3 },
+      { t: 'Kumpulkan Batu: pukul batu abu-abu besar sampai pecah (2 batu)', ok: () => st.mine >= 2 },
+      { t: 'Buka Tas, tab Alat, buat Kapak (5 Kayu + 3 Batu)', ok: () => inv.kapak > 0 || inv.kapakbesi > 0 },
+      { t: 'Tekan tombol Bangun (palu) dan pasang 4 bagian rumah', ok: () => st.built >= 4 },
+      { t: 'Bangun Api Unggun (3 Kayu + 2 Batu)', ok: () => st.api >= 1 },
+      { t: 'Berburu 1 hewan (kelinci/rusa) untuk dapat Daging', ok: () => st.hunt >= 1 },
+      { t: 'Masak daging mentah: berdiri dekat api, tekan tombol Masak', ok: () => st.cook >= 1 },
+      { t: 'Bangun Kasur (6 Kayu + 4 Serat). Serat dari menebang pohon / semak buah', ok: () => st.bed >= 1 },
+      { t: 'Tidur di kasur saat malam (tekan tombol Tidur di dekat kasur)', ok: () => st.sleep >= 1 },
+      { t: 'Buat Beliung: Tas > Bahan > Tali (3 Serat), lalu Tas > Alat > Beliung. Pegang di hotbar', ok: () => inv.beliung > 0 || inv.beliungbesi > 0 },
+      { t: 'Ikuti panah Goa di bawah. Masuk, bawa Obor, tambang 3 bijih/batu bara', ok: () => st.ore >= 3 },
+      { t: 'Gali Tanah dengan Sekop, bangun Tungku, lalu Lebur Bijih jadi Besi', ok: () => st.smelt >= 1 },
+      { t: 'Buat Ember, isi air di laut/danau, lalu minum', ok: () => st.ember >= 1 },
+      { t: 'Buat Pancing dan tangkap 1 ikan di laut', ok: () => st.fish >= 1 },
+      { t: 'Bangun Dermaga di pantai', ok: () => st.dock >= 1 },
+      { t: 'Rakit kapal: lantai di air + Mesin + Setir', ok: () => st.boat >= 1 },
+      { t: 'Berlayar! Dekati Setir, tekan tombol Kemudi', ok: () => st.sail >= 1 },
     ];
   }
 
@@ -340,14 +342,14 @@ export class Game {
     while (this.quest < q.length && q[this.quest].ok()) {
       this.quest++;
       changed = true;
-      this.toast('✅ Misi selesai!');
+      this.toast('Misi selesai!');
       Audio.sfx('quest');
       this.p.hunger = Math.min(100, this.p.hunger + 8);
     }
     if (!changed && !force) return;
     const el = $('questTxt');
-    if (this.quest >= q.length) el.textContent = '🏆 Semua misi selesai! Jelajahi & bangun bebas.';
-    else el.textContent = `📌 Misi ${this.quest + 1}/${q.length}: ${q[this.quest].t}`;
+    if (this.quest >= q.length) el.textContent = ' Semua misi selesai! Jelajahi & bangun bebas.';
+  else el.textContent = ` Misi ${this.quest + 1}/${q.length}: ${q[this.quest].t}`;
   }
 
   /* ================= PARTIKEL ================= */
@@ -403,15 +405,15 @@ export class Game {
     let name, hp, max;
     if (tg.kind === 'node') {
       const n = tg.n;
-      if (n.type === 'ore') name = n.ore === 'coal' ? '⚫ Batu Bara' : '🟠 Bijih Besi';
-      else name = n.type === 'tree' ? (n.kind === 'palm' ? '🌴 Pohon Kelapa' : '🌲 Pohon') : n.type === 'rock' ? '🪨 Batu' : '🫐 Semak Buah';
+      if (n.type === 'ore') name = n.ore === 'coal' ? 'Batu Bara' : 'Bijih Besi';
+      else name = n.type === 'tree' ? (n.kind === 'palm' ? 'Pohon Kelapa' : 'Pohon') : n.type === 'rock' ? 'Batu' : 'Semak Buah';
       hp = n.hp; max = n.max;
     } else {
       const a = tg.a;
-      name = { rabbit: '🐇 Kelinci', deer: '🦌 Rusa', wolf: '🐺 Serigala', fish: '🐟 Ikan' }[a.type];
+      name = { rabbit: 'Kelinci', deer: 'Rusa', wolf: 'Serigala', fish: 'Ikan' }[a.type];
       hp = a.hp; max = a.def.hp;
     }
-    $('targetName').textContent = name + '  ·  tahan ✊';
+    $('targetName').textContent = name + '  ·  tahan Serang';
     $('targetFill').style.width = clamp((hp / max) * 100, 0, 100) + '%';
     box.classList.add('show');
   }
@@ -511,6 +513,7 @@ export class Game {
     $('pauseResume').addEventListener('click', () => this.closePause(), sig);
     $('pauseSettings').addEventListener('click', () => this.o.openSettings && this.o.openSettings(), sig);
     $('pauseHud').addEventListener('click', () => this.startHudEdit(), sig);
+    $('pauseGuide').addEventListener('click', () => this.o.openGuide && this.o.openGuide(), sig);
     $('pauseSave').addEventListener('click', () => { this.save(); this.toast('Dunia tersimpan'); }, sig);
     $('pauseExit').addEventListener('click', () => this.exit(), sig);
     $('chatSend').addEventListener('click', () => this.sendChat(), sig);
@@ -629,10 +632,10 @@ export class Game {
         if (c > 0) {
           this.cart.inv[item] = (this.cart.inv[item] || 0) + c;
           left -= c;
-          this.toastOnce('tocart', '🛒 Tas penuh, masuk gerobak');
+          this.toastOnce('tocart', 'Tas penuh, masuk gerobak');
         }
       }
-      if (left > 0) this.toastOnce('full', '🎒 Tas penuh! Buang/pakai barang');
+      if (left > 0) this.toastOnce('full', 'Tas penuh! Buang/pakai barang');
       if (n - left <= 0) return;
     } else this.p.inv[item] = (this.p.inv[item] || 0) + n;
     if (!silent) this.toast(`+${n - left} ${ITEMS[item]}`);
@@ -695,7 +698,7 @@ export class Game {
     for (const k of Object.keys(BUILD)) {
       const b = document.createElement('button');
       b.className = 'bItem';
-      b.innerHTML = `<span>${BUILD[k].ic}</span><b>${BUILD[k].n}</b><i>${this.costText(BUILD[k].cost)}</i>`;
+      b.innerHTML = `${ico('b_' + k)}<b>${BUILD[k].n}</b><i>${costIcons(BUILD[k].cost)}</i>`;
       b.addEventListener('click', () => this.select(k), { signal: this.ac.signal });
       w.appendChild(b);
       this.buildBtns[k] = b;
@@ -722,7 +725,7 @@ export class Game {
     $('btnBuild').classList.toggle('on', this.build);
     $('buildBar').classList.toggle('show', this.build);
     $('hotbar').classList.toggle('gone', this.build);
-    $('btnAct').textContent = this.build ? '🔨' : '✊';
+    setIcon($('btnAct'), this.build ? 'hammer' : 'fist');
     if (!this.build && this.ghost) this.ghost.visible = false;
   }
 
@@ -976,7 +979,7 @@ export class Game {
   afterPlace(p, remote) {
     if (p.k === 'setir' && !p.vessel) {
       const V = this.formVessel(p);
-      if (V && !remote) { this.stats.boat++; this.toast('⚓ Kapal terbentuk! Pasang Mesin lalu pakai Setir'); }
+      if (V && !remote) { this.stats.boat++; this.toast('Kapal terbentuk! Pasang Mesin lalu pakai Setir'); }
     }
   }
 
@@ -1572,23 +1575,23 @@ export class Game {
     $('barFoodF').style.width = clamp(p.hunger, 0, 100) + '%';
     $('barWaterF').style.width = clamp(p.thirst, 0, 100) + '%';
     const hh = Math.floor(this.t * 24), mm = Math.floor((this.t * 24 - hh) * 60);
-    const icon = this.inCave ? '⛏️' : this.sky.day > 0.5 ? '☀️' : this.t > 0.2 && this.t < 0.3 || this.t > 0.7 && this.t < 0.8 ? '🌅' : '🌙';
-    $('clockTxt').textContent = `${icon} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · Hari ${this.day}` + (this.net ? ` · 👥 ${this.remotes.size + 1}` : '');
+    const icon = this.inCave ? 'cave' : this.sky.day > 0.5 ? 'sun' : this.t > 0.2 && this.t < 0.3 || this.t > 0.7 && this.t < 0.8 ? 'dusk' : 'moon';
+    setIconText($('clockTxt'), icon, `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · Hari ${this.day}` + (this.net ? ` · ${this.remotes.size + 1} pemain` : ''));
     this.updateCaveHint();
   }
 
-  /* panah menuju goa terdekat (saat misi tambang) */
+  /* panah menuju goa terdekat: selalu tampil di luar goa supaya mudah menemukannya */
   updateCaveHint() {
     const el = $('questHint');
-    if (this.inCave || !this.caves.length || this.quest < 9 || this.quest > 10 || !(this.p.inv.beliung > 0 || this.p.inv.beliungbesi > 0)) { el.textContent = ''; return; }
+    if (this.inCave || !this.caves.length) { el.classList.add('off'); return; }
+    el.classList.remove('off');
     const p = this.p;
     let best = null, bd = 1e9;
     for (const c of this.caves) { const d = Math.hypot(c.x - p.x, c.z - p.z); if (d < bd) { bd = d; best = c; } }
     const ty = Math.atan2(-(best.x - p.x), -(best.z - p.z));
     const rel = angDiff(ty, p.yaw);
-    const arrows = ['⬆️', '↖️', '⬅️', '↙️', '⬇️', '↘️', '➡️', '↗️'];
-    const i = ((Math.round(rel / (Math.PI / 4)) % 8) + 8) % 8;
-    el.textContent = `⛰️ Goa terdekat ${arrows[i]} ${Math.round(bd)} m`;
+    $('hintArrow').style.transform = `rotate(${(-rel * 180) / Math.PI}deg)`;
+    $('hintTxt').textContent = bd < 8 ? 'Pintu goa di depanmu!' : `Goa terdekat ${Math.round(bd)} m`;
   }
 
   render() {

@@ -34,10 +34,13 @@ export function findCaves(hf, seed) {
   /* satu goa yang cukup dekat dari titik spawn */
   const near = cand.filter((c) => c.d0 > 35 && c.d0 < 110).sort(() => rnd() - 0.5)[0];
   if (near) picked.push(near);
+  /* goa kedua juga cukup dekat, sisanya tersebar di seluruh pulau */
+  const near2 = cand.filter((c) => c.d0 > 40 && c.d0 < 120 && (!near || Math.hypot(c.x - near.x, c.z - near.z) > 40)).sort(() => rnd() - 0.5)[0];
+  if (near2) picked.push(near2);
   const rest = cand.slice().sort(() => rnd() - 0.5);
   for (const c of rest) {
-    if (picked.length >= 4) break;
-    if (picked.every((p) => Math.hypot(p.x - c.x, p.z - c.z) > 70)) picked.push(c);
+    if (picked.length >= 10) break;
+    if (picked.every((p) => Math.hypot(p.x - c.x, p.z - c.z) > 38)) picked.push(c);
   }
   if (!picked.length) {
     /* cadangan: pasang di daratan mana pun yang cukup tinggi */
@@ -79,7 +82,7 @@ export function makeEntrance(c) {
   const cx = cv.getContext('2d');
   cx.fillStyle = '#5a3a1c'; cx.fillRect(0, 0, 256, 64);
   cx.fillStyle = '#f4efe3'; cx.font = 'bold 34px sans-serif'; cx.textAlign = 'center';
-  cx.fillText('⛏ TAMBANG', 128, 44);
+  cx.fillText('TAMBANG', 128, 44);
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.45), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
   sign.position.set(0, 3.0, 0.72);
   g.add(sign);

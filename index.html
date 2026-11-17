@@ -46,26 +46,26 @@
     <!-- LOBI -->
     <div id="sLobby" class="screen">
       <div class="topLeft"><div class="chip" id="lbName">Santay</div></div>
-      <div class="topRight"><button id="lbSet" class="iconBtn">⚙️</button></div>
-      <div class="leftMid"><button id="lbVault" class="btn side">🗄️ Vault</button></div>
+      <div class="topRight"><button id="lbSet" class="iconBtn" data-ic="gear"></button></div>
+      <div class="leftMid"><button id="lbVault" class="btn side" data-ic="chest">Vault</button><button id="lbGuide" class="btn side" data-ic="book">Panduan</button></div>
       <div class="charTag" id="lbChar">Santay</div>
       <div class="bottomRight">
         <div class="startLabel">MULAI</div>
-        <button id="btnOnline" class="btn modeBtn on">🌐 Online</button>
-        <button id="btnWorlds" class="btn modeBtn off">🌍 Buat Dunia</button>
+        <button id="btnOnline" class="btn modeBtn on" data-ic="globe">Online</button>
+        <button id="btnWorlds" class="btn modeBtn off" data-ic="world">Buat Dunia</button>
       </div>
       <small class="credit">by Gunz Developer</small>
     </div>
 
     <!-- DUNIA SAYA -->
     <div id="sWorlds" class="screen shade">
-      <button id="wlBack" class="btn back">‹ Kembali</button>
+      <button id="wlBack" class="btn back" data-ic="back">Kembali</button>
       <div class="onWrap">
         <div class="onLeft">
-          <h2 class="pageTitle">🌍 Dunia Saya</h2>
-          <button id="wlNew" class="bigRow"><span>➕</span><div><b>Buat Dunia</b><i>Dunia baru dengan nama sendiri</i></div></button>
-          <label class="openToggle"><input id="wlOpen" type="checkbox" checked /> <span>🌐 Izinkan pemain lain masuk ke duniaku (butuh internet)</span></label>
-          <small class="hint">Saat dunia dimainkan &amp; terbuka, dunia muncul di daftar <b>Room Global</b> (menu Online) dengan ikon 🌍. Temanmu tinggal klik untuk masuk.</small>
+          <h2 class="pageTitle" data-ic="world">Dunia Saya</h2>
+          <button id="wlNew" class="bigRow"><span data-ic="plus"></span><div><b>Buat Dunia</b><i>Dunia baru dengan nama sendiri</i></div></button>
+          <label class="openToggle"><input id="wlOpen" type="checkbox" checked /> <span>Izinkan pemain lain masuk ke duniaku (butuh internet)</span></label>
+          <small class="hint">Saat dunia dimainkan &amp; terbuka, dunia muncul di daftar <b>Room Global</b> (menu Online) . Temanmu tinggal klik untuk masuk.</small>
         </div>
         <div class="onRight">
           <div class="listHead"><b>Dunia yang dibuat</b><span id="wlCount"></span></div>
@@ -75,12 +75,12 @@
     </div>
 
     <div id="sNewWorld" class="screen shade">
-      <button id="nwBack" class="btn back">‹ Kembali</button>
+      <button id="nwBack" class="btn back" data-ic="back">Kembali</button>
       <div class="center">
         <div class="formCard">
           <h2>Buat Dunia</h2>
           <input id="nwName" maxlength="16" placeholder="Nama dunia" autocomplete="off" />
-          <button id="nwGo" class="btn big">▶ Play</button>
+          <button id="nwGo" class="btn big" data-ic="play">Play</button>
           <div id="nwMsg" class="msg"></div>
         </div>
       </div>
@@ -88,13 +88,13 @@
 
     <!-- ONLINE -->
     <div id="sOnline" class="screen shade">
-      <button id="onBack" class="btn back">‹ Kembali</button>
+      <button id="onBack" class="btn back" data-ic="back">Kembali</button>
       <div class="onWrap">
         <div class="onLeft">
-          <h2 class="pageTitle">🌐 Mabar Online</h2>
-          <button id="onOpen" class="bigRow"><span>🌍</span><div><b>Open World</b><i>Dunia bebas, ketemu pemain lain otomatis</i></div></button>
-          <button id="onCreate" class="bigRow"><span>🏕️</span><div><b>Buat Room</b><i>Kosongkan password = tampil di daftar global</i></div></button>
-          <button id="onFind" class="bigRow"><span>🔒</span><div><b>Cari Room Private</b><i>Masuk dengan nama &amp; password</i></div></button>
+          <h2 class="pageTitle" data-ic="globe">Mabar Online</h2>
+          <button id="onOpen" class="bigRow"><span data-ic="globe"></span><div><b>Open World</b><i>Dunia bebas, ketemu pemain lain otomatis</i></div></button>
+          <button id="onCreate" class="bigRow"><span data-ic="home"></span><div><b>Buat Room</b><i>Kosongkan password = tampil di daftar global</i></div></button>
+          <button id="onFind" class="bigRow"><span data-ic="door"></span><div><b>Cari Room Private</b><i>Masuk dengan nama &amp; password</i></div></button>
         </div>
         <div class="onRight">
           <div class="listHead"><b>Room Global</b><span id="onStatus">Menghubungkan...</span></div>
@@ -104,7 +104,7 @@
     </div>
 
     <div id="sCreate" class="screen shade">
-      <button id="crBack" class="btn back">‹ Kembali</button>
+      <button id="crBack" class="btn back" data-ic="back">Kembali</button>
       <div class="center">
         <div class="formCard">
           <h2>Buat Room</h2>
@@ -118,7 +118,7 @@
     </div>
 
     <div id="sFind" class="screen shade">
-      <button id="fnBack" class="btn back">‹ Kembali</button>
+      <button id="fnBack" class="btn back" data-ic="back">Kembali</button>
       <div class="center">
         <div class="formCard">
           <h2>Cari Room Private</h2>
@@ -131,12 +131,12 @@
     </div>
 
     <div id="sRoom" class="screen">
-      <button id="roomLeave" class="btn back">‹ Keluar</button>
+      <button id="roomLeave" class="btn back" data-ic="back">Keluar</button>
       <div class="roomTitle" id="roomTitle">Room</div>
       <div id="slots" class="slots"></div>
       <div class="charTag" id="roomMe">Santay</div>
       <div class="bottomRight">
-        <button id="roomGo" class="btn start hidden">GAS! 🚀</button>
+        <button id="roomGo" class="btn start hidden">GAS!</button>
         <div id="roomWait" class="wait hidden">Menunggu host memulai...</div>
       </div>
     </div>
@@ -144,15 +144,24 @@
     <!-- MODAL -->
     <div id="mVault" class="modal">
       <div class="card">
-        <h3>🗄️ Vault Karakter</h3>
+        <h3 data-ic="chest">Vault Karakter</h3>
         <div id="vaultGrid" class="vaultGrid"></div>
         <button id="vaultClose" class="btn">Pilih</button>
       </div>
     </div>
 
+    <div id="mGuide" class="modal top">
+      <div class="card guide">
+        <h3 data-ic="book">Buku Panduan</h3>
+        <div id="guideTabs" class="tabs"></div>
+        <div id="guideBody" class="guideBody"></div>
+        <button id="guideClose" class="btn">Tutup</button>
+      </div>
+    </div>
+
     <div id="mSet" class="modal top">
       <div class="card">
-        <h3>⚙️ Pengaturan</h3>
+        <h3 data-ic="gear">Pengaturan</h3>
         <div class="row"><label>Grafik</label>
           <div class="seg"><button id="gfxSmooth">Smooth</button><button id="gfxStd">Standar</button><button id="gfxUlt">Ultra</button></div>
         </div>
@@ -175,17 +184,17 @@
     <!-- HUD -->
     <div id="hud" class="screen hudScreen">
       <div id="stats">
-        <div class="bar2 hp"><span>❤️</span><div><i id="barHpF"></i></div></div>
-        <div class="bar2 food"><span>🍖</span><div><i id="barFoodF"></i></div></div>
-        <div class="bar2 water"><span>💧</span><div><i id="barWaterF"></i></div></div>
+        <div class="bar2 hp"><span data-ic="heart"></span><div><i id="barHpF"></i></div></div>
+        <div class="bar2 food"><span data-ic="meat"></span><div><i id="barFoodF"></i></div></div>
+        <div class="bar2 water"><span data-ic="drop"></span><div><i id="barWaterF"></i></div></div>
       </div>
-      <div id="clockTxt" class="clock">☀️ 07:00 · Hari 1</div>
+      <div id="clockTxt" class="clock">07:00 · Hari 1</div>
       <div id="voiceTag" class="voiceTag"></div>
-      <button id="btnBag" class="iconBtn topBtn bag pe">🎒</button>
-      <button id="btnPause" class="iconBtn topBtn pause pe">⏸</button>
-      <button id="btnMic" class="rbtn mic onlineOnly pe">🎤</button>
-      <button id="btnChat" class="rbtn chat onlineOnly pe">💬</button>
-      <div id="quest" class="quest"><span id="questTxt"></span><div id="questHint" class="questHint"></div></div>
+      <button id="btnBag" class="iconBtn topBtn bag pe" data-ic="bag"></button>
+      <button id="btnPause" class="iconBtn topBtn pause pe" data-ic="pause"></button>
+      <button id="btnMic" class="rbtn mic onlineOnly pe" data-ic="mic"></button>
+      <button id="btnChat" class="rbtn chat onlineOnly pe" data-ic="chat"></button>
+      <div id="quest" class="quest"><span id="questTxt"></span><div id="questHint" class="questHint"><img id="hintArrow" class="ic" alt=""><span id="hintTxt"></span></div></div>
       <div class="crosshair"></div>
       <div id="target" class="target"><div id="targetName"></div><div class="tbar"><i id="targetFill"></i></div></div>
       <div id="hurt" class="hurt"></div>
@@ -194,45 +203,45 @@
 
       <div id="joy" class="joy pe"><div id="joyKnob" class="knob"></div></div>
 
-      <button id="btnAct" class="rbtn act pe">✊</button>
-      <button id="btnJump" class="rbtn jump pe">⤴</button>
-      <button id="btnCrouch" class="rbtn crouch pe">🧎</button>
-      <button id="btnBuild" class="rbtn build pe">🏗️</button>
-      <button id="btnEat" class="rbtn eat pe">🍖</button>
+      <button id="btnAct" class="rbtn act pe" data-ic="fist"></button>
+      <button id="btnJump" class="rbtn jump pe" data-ic="jump"></button>
+      <button id="btnCrouch" class="rbtn crouch pe" data-ic="crouch"></button>
+      <button id="btnBuild" class="rbtn build pe" data-ic="hammer"></button>
+      <button id="btnEat" class="rbtn eat pe" data-ic="meat"></button>
       <button id="btnCtx" class="rbtn ctx pe"></button>
 
       <div id="hotbar" class="hotbar pe"></div>
 
       <div id="buildBar" class="buildBar pe">
         <div id="buildItems" class="buildItems"></div>
-        <button id="btnRot" class="rbtn rot">🔄</button>
+        <button id="btnRot" class="rbtn rot" data-ic="rotate"></button>
       </div>
 
       <div id="chatBar" class="chatBar pe">
         <input id="chatIn" type="text" maxlength="120" placeholder="Ketik pesan..." autocomplete="off" />
         <button id="chatSend" class="btn small">Kirim</button>
-        <button id="chatClose" class="btn small dim">✕</button>
+        <button id="chatClose" class="btn small dim" data-ic="close"></button>
       </div>
 
-      <div id="sleepMsg" class="sleepMsg"><div id="sleepMsgTxt">😴 Tidur...</div></div>
+      <div id="sleepMsg" class="sleepMsg"><div id="sleepMsgTxt">Tidur...</div></div>
       <div id="fade" class="fade"><span>Zzz...</span></div>
       <div id="panelDead" class="deadPanel"><div>Kamu pingsan...<small>Bangkit di titik spawn</small></div></div>
 
       <div id="hudEdit" class="hudEdit pe">
-        <div class="row2"><b>🎛️ Atur HUD</b><span>Seret tombol untuk memindah · pilih lalu atur ukuran</span></div>
+        <div class="row2"><b>Atur HUD</b><span>Seret tombol untuk memindah · pilih lalu atur ukuran</span></div>
         <div class="row2"><span id="hudEditName">Pilih tombol</span>
           <label>Ukuran <input id="hudEditSize" type="range" min="0.5" max="2.2" step="0.05" value="1" disabled /></label>
           <label>Transparansi <input id="hudEditOp" type="range" min="0.25" max="1" step="0.05" value="1" /></label></div>
         <div class="row2">
           <button id="hudEditResetOne" class="btn small dim">Reset tombol ini</button>
           <button id="hudEditResetAll" class="btn small dim">Reset semua</button>
-          <button id="hudEditDone" class="btn small">Selesai ✓</button>
+          <button id="hudEditDone" class="btn small">Selesai</button>
         </div>
       </div>
 
       <div id="panelBag" class="panel pe">
         <div class="card wide">
-          <h3 id="bagTitle">🎒 Tas</h3>
+          <h3 id="bagTitle" data-ic="bag">Tas</h3>
           <div id="bagList" class="bagList"></div>
           <div id="bagTabs" class="tabs"></div>
           <div id="bagCraft" class="bagCraft"></div>
@@ -243,15 +252,16 @@
         <div class="card">
           <h3>Jeda</h3>
           <button id="pauseResume" class="btn big">Lanjut</button>
-          <button id="pauseHud" class="btn">🎛️ Atur HUD</button>
-          <button id="pauseSettings" class="btn">⚙️ Pengaturan</button>
-          <button id="pauseSave" class="btn">💾 Simpan</button>
+          <button id="pauseGuide" class="btn" data-ic="book">Panduan</button>
+          <button id="pauseHud" class="btn" data-ic="sliders">Atur HUD</button>
+          <button id="pauseSettings" class="btn" data-ic="gear">Pengaturan</button>
+          <button id="pauseSave" class="btn" data-ic="save">Simpan</button>
           <button id="pauseExit" class="btn danger">Simpan &amp; Keluar</button>
         </div>
       </div>
     </div>
 
-    <div id="rotate" class="rotateMsg">Putar HP ke mode landscape 📱↻</div>
+    <div id="rotate" class="rotateMsg">Putar HP ke mode landscape</div>
   </div>
 
   <script type="module" src="/src/main.js"></script>

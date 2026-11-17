@@ -25,3 +25,4 @@ PC: WASD, spasi, klik, B bangun, R putar, E aksi, F makan, I tas.
 - **Alat**: Kapak, Beliung, Sekop, Pedang (batu/besi), Pancing, Ember, Panci, Obor, Lampu; hotbar alat.
 - **Dunia**: goa/tambang (bijih besi, batu bara), Tungku (lebur besi), Kompor (sup), Gerobak (bawa barang), Pintu buka-tutup.
 - **Laut**: Dermaga, Kapal rakitan sendiri (lantai/dinding di air) + Mesin + Setir.
+- **Buku Panduan** (menu utama & menu jeda), panah goa selalu tampil, ±10 goa, ikon tombol digambar dengan canvas.

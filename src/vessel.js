@@ -243,7 +243,7 @@ export const vesselMixin = {
 
   startDrive(V) {
     if (V.driver && V.driver !== 'me') { this.toast('Setir sedang dipakai pemain lain'); return; }
-    if (V.engines < 1) { this.toast('Pasang ⚙️ Mesin Kapal dulu'); return; }
+  if (V.engines < 1) { this.toast('Pasang  Mesin Kapal dulu'); return; }
     if (!V.helm) return;
     /* berdiri di belakang setir */
     if (this.p.on !== V) {
@@ -261,7 +261,7 @@ export const vesselMixin = {
     this.driving = V;
     this.stats.sail = (this.stats.sail || 0) + 0;
     if (this.net) this.net.send({ t: 'vd', id: V.id, on: 1 });
-    this.toast('Joystick: ↑ maju, ↓ mundur, ← → belok');
+    this.toast('Joystick:  maju,  mundur,  belok');
   },
 
   stopDrive() {

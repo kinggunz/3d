@@ -8,6 +8,11 @@ import { Audio } from './audio.js';
 import { SKINS, drawPreview } from './chars.js';
 import { initTextures } from './textures.js';
 import { sleep } from './util.js';
+import { hydrate, ico, setIcon } from './icons.js';
+import { openGuide, initGuide } from './guide.js';
+
+hydrate();
+initGuide();
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -448,6 +453,7 @@ function renderVault() {
 }
 
 $('lbSet').onclick = openSettings;
+$('lbGuide').onclick = () => openGuide();
 $('lbVault').onclick = () => { renderVault(); $('mVault').classList.add('show'); };
 $('vaultClose').onclick = () => $('mVault').classList.remove('show');
 
@@ -473,22 +479,23 @@ function renderWorlds() {
     const row = document.createElement('div');
     row.className = 'worldRow';
     const nm = document.createElement('b');
-    nm.textContent = '🌍 ' + wd.name;
+    nm.innerHTML = ico('globe') + '<span class="lb"></span>';
+    nm.lastChild.textContent = wd.name;
     const sm = document.createElement('small');
     sm.textContent = 'Hari ' + (wd.day || 1) + ' · dibuat ' + dateTxt(wd.created);
     nm.appendChild(sm);
     const play = document.createElement('button');
     play.className = 'btn small';
-    play.textContent = '▶ Play';
+    play.setAttribute('data-ic', 'play'); play.textContent = 'Play';
     play.onclick = () => playWorld(wd);
     const del = document.createElement('button');
     del.className = 'btn small danger';
-    del.textContent = '🗑️';
+    del.setAttribute('data-ic', 'trash');
     let armed = 0;
     del.onclick = () => {
       if (!armed) {
-        armed = setTimeout(() => { armed = 0; del.textContent = '🗑️'; }, 3000);
-        del.textContent = 'Yakin?';
+        armed = setTimeout(() => { armed = 0; setIcon(del, 'trash'); }, 3000);
+        del.textContent = 'Yakin?'; del.dataset.icKey = '';
         return;
       }
       clearTimeout(armed);
@@ -497,6 +504,7 @@ function renderWorlds() {
       flash('Dunia "' + wd.name + '" dihapus');
     };
     row.append(nm, play, del);
+    hydrate(row);
     w.appendChild(row);
   }
 }
@@ -548,7 +556,7 @@ const myInfo = () => ({ name: account.name, skin: skinId });
 function renderRoomList(list) {
   const w = $('roomList');
   w.innerHTML = '';
-  $('onStatus').textContent = list.length ? list.length + ' room aktif' : 'Online ✓';
+  $('onStatus').textContent = list.length ? list.length + ' room aktif' : 'Online';
   if (!list.length) {
     w.innerHTML = '<div class="roomEmpty">Belum ada room/dunia publik.<br>Buat dunia sendiri, buat room, atau main di Open World!</div>';
     return;
@@ -556,7 +564,7 @@ function renderRoomList(list) {
   for (const r of list) {
     const el = document.createElement('div');
     el.className = 'roomRow';
-    el.innerHTML = `<b>${r.world ? '<span class="wtag">🌍</span>' : ''}${esc(r.name)}<small>${r.world ? 'Dunia' : 'Room'} · Host: ${esc(r.hostName || '?')}</small></b><em>${r.n || 1}/${r.max || MAXP}</em>`;
+    el.innerHTML = `<b>${r.world ? ico('globe') : ''}${esc(r.name)}<small>${r.world ? 'Dunia' : 'Room'} · Host: ${esc(r.hostName || '?')}</small></b><em>${r.n || 1}/${r.max || MAXP}</em>`;
     el.onclick = () => joinFromList(r);
     w.appendChild(el);
   }
@@ -571,7 +579,7 @@ async function openOnlineHub() {
   browse = b;
   try {
     await b.start();
-    if (browse === b) { $('onStatus').textContent = 'Online ✓'; renderRoomList(b.list()); }
+    if (browse === b) { $('onStatus').textContent = 'Online'; renderRoomList(b.list()); }
   } catch (e) {
     if (browse === b) {
       $('onStatus').textContent = 'Offline';
@@ -597,7 +605,7 @@ function renderSlots(pl) {
     d.className = 'slot' + (p ? ' full' : '');
     if (p) {
       const col = (SKINS[p.skin] && SKINS[p.skin].shirt) || '#fff';
-      d.innerHTML = `<span class="dot" style="background:${col}"></span>${esc(p.name)}${p.id === hostId ? ' 👑' : ''}`;
+      d.innerHTML = `<span class="dot" style="background:${col}"></span>${esc(p.name)}${p.id === hostId ? ' (host)' : ''}`;
     } else d.innerHTML = `Slot ${i + 1}<br>Menunggu pemain...`;
     return d;
   };
@@ -644,7 +652,7 @@ async function createRoom() {
   }
   net = n;
   msg.textContent = '';
-  setupRoom(room + (pw ? ' 🔒' : ''), true);
+  setupRoom(room + (pw ? ' (kunci)' : ''), true);
 }
 
 async function joinPrivate() {
@@ -664,7 +672,7 @@ async function joinPrivate() {
   net = n;
   msg.textContent = '';
   if (n.info && n.info.world) { startGame({ online: true, seed: n.info.seed, joinWorld: true }); return; }
-  setupRoom(room + ' 🔒', false);
+  setupRoom(room + ' (kunci)', false);
 }
 
 let joining = false;
@@ -677,7 +685,7 @@ async function joinFromList(r) {
     await n.join(r.id, myInfo());
   } catch (e) {
     n.close();
-    $('onStatus').textContent = 'Online ✓';
+    $('onStatus').textContent = 'Online';
     flash(e.message);
     joining = false;
     return;
@@ -697,7 +705,7 @@ async function goOpenWorld() {
     await n.joinOpen(myInfo());
   } catch (e) {
     n.close();
-    $('onStatus').textContent = 'Online ✓';
+    $('onStatus').textContent = 'Online';
     flash(e.message);
     joining = false;
     return;
@@ -736,6 +744,7 @@ async function startGame(o) {
     name: account.name,
     skinId,
     openSettings,
+    openGuide,
     onExit: exitGame,
   });
   try {

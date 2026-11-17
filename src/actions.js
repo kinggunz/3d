@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { clamp, lerp } from './util.js';
 import { Audio } from './audio.js';
+import { ico, costIcons, setIcon } from './icons.js';
 import { ITEMS, ICON, STACK, TOOLS, EQUIP, TOOL, CRAFT, CRAFT_CATS, CAP_BAG, CAP_CART, costText } from './items.js';
 import { BUILD } from './pieces.js';
 import { MINE_Y } from './mine.js';
@@ -175,11 +176,11 @@ export const actionsMixin = {
     for (const id of items) {
       const b = document.createElement('button');
       b.className = 'hbItem' + (id === this.eq ? ' sel' : '');
-      const ic = id === 'tangan' ? '✊' : ICON[id];
+      const ic = ico(id === 'tangan' ? 'fist' : id);
       let extra = '';
       if (id === 'obor') extra = `<i>${this.p.inv.obor}</i>`;
-      else if (id === 'ember' && this.p.embFull) extra = '<i>💧</i>';
-      b.innerHTML = `<span>${ic}</span>${extra}`;
+      else if (id === 'ember' && this.p.embFull) extra = '<i>' + ico('drop') + '</i>';
+      b.innerHTML = `${ic}${extra}`;
       b.title = id === 'tangan' ? 'Tangan' : ITEMS[id];
       b.addEventListener('click', (e) => {
         if (this.hudEditing) return;
@@ -202,7 +203,7 @@ export const actionsMixin = {
     this.updateHeld();
     this.renderHotbar(true);
     if (!silent && id !== 'tangan') {
-      const tip = { pancing: 'Arahkan ke laut, tekan ✊ untuk melempar', ember: 'Arahkan ke air, tekan ✊ untuk mengisi', sekop: 'Arahkan ke tanah, tahan ✊ untuk menggali', obor: 'Obor menyala 🔥', beliung: 'Tahan ✊ di bijih / batu bara' }[id];
+  const tip = { pancing: 'Arahkan ke laut, tekan Serang untuk melempar', ember: 'Arahkan ke air, tekan Serang untuk mengisi', sekop: 'Arahkan ke tanah, tahan Serang untuk menggali', obor: 'Obor menyala ', beliung: 'Tahan  di bijih / batu bara' }[id];
       this.toast(ITEMS[id] + (tip ? ' — ' + tip : ' dipegang'));
     }
   },
@@ -213,7 +214,7 @@ export const actionsMixin = {
     const panel = $('panelBag');
     if (!panel || !panel.classList.contains('show')) return;
     const p = this.p;
-    $('bagTitle').textContent = `🎒 Tas  ${this.bagCount()}/${CAP_BAG}`;
+    $('bagTitle').innerHTML = ico('bag') + `<span class="lb">Tas  ${this.bagCount()}/${CAP_BAG}</span>`;
     const l = $('bagList');
     l.innerHTML = '';
     let any = false;
@@ -224,7 +225,7 @@ export const actionsMixin = {
       const d = document.createElement('div');
       d.className = 'bagItem';
       const isTool = TOOLS.includes(k);
-      d.innerHTML = `<span>${ICON[k]}</span><b>${ITEMS[k]}</b><i>${isTool ? '✓' : n}</i>`;
+      d.innerHTML = `${ico(k)}<b>${ITEMS[k]}</b><i>${isTool ? 'Punya' : n}</i>`;
       l.appendChild(d);
     }
     if (!any) l.innerHTML = '<div class="roomEmpty">Tas masih kosong. Tebang pohon & kumpulkan batu!</div>';
@@ -244,13 +245,13 @@ export const actionsMixin = {
     if (this.bagTab === 'Bangun') {
       const info = document.createElement('div');
       info.className = 'hint';
-      info.textContent = 'Tekan 🏗️ di layar untuk membangun. Bahan yang dibutuhkan:';
+      info.textContent = 'Tekan tombol Bangun (palu) di layar untuk membangun. Bahan yang dibutuhkan:';
       c.appendChild(info);
       for (const k of Object.keys(BUILD)) {
         if (k === 'bongkar') continue;
         const row = document.createElement('div');
         row.className = 'recipe';
-        row.innerHTML = `<b>${BUILD[k].ic} ${BUILD[k].n}</b><span>${this.costHtml(BUILD[k].cost)}</span>`;
+        row.innerHTML = `<b>${ico('b_' + k)}${BUILD[k].n}</b><span>${this.costHtml(BUILD[k].cost)}</span>`;
         c.appendChild(row);
       }
     } else {
@@ -260,12 +261,12 @@ export const actionsMixin = {
         const row = document.createElement('div');
         row.className = 'recipe';
         const nm = document.createElement('b');
-        nm.textContent = (r.tool ? ICON[r.id] + ' ' : r.cart ? '🛒 ' : '') + r.n;
+        nm.innerHTML = ico(r.cart ? 'gerobak' : r.tool ? r.id : (r.give ? Object.keys(r.give)[0] : r.id)) + r.n;
         const sp = document.createElement('span');
         sp.innerHTML = this.costHtml(r.cost);
         const bt = document.createElement('button');
         bt.className = 'btn small' + (owned ? ' dim' : '');
-        bt.textContent = owned ? '✓ Punya' : 'Buat';
+  bt.textContent = owned ? 'Punya' : 'Buat';
         bt.addEventListener('click', () => this.craft(r));
         row.append(nm, sp, bt);
         c.appendChild(row);
@@ -274,13 +275,13 @@ export const actionsMixin = {
     }
     const eb = document.createElement('button');
     eb.className = 'btn small';
-    eb.textContent = 'Makan 🍖';
+    eb.innerHTML = ico('meat') + '<span class="lb">Makan</span>';
     eb.addEventListener('click', () => this.eat());
     c.appendChild(eb);
   },
 
   costHtml(cost) {
-    return Object.keys(cost).map((k) => `<em class="${(this.p.inv[k] || 0) >= cost[k] ? 'ok' : 'no'}">${cost[k]}${ICON[k] || k}</em>`).join(' ');
+    return costIcons(cost, this.p.inv);
   },
 
   craft(r) {
@@ -307,7 +308,7 @@ export const actionsMixin = {
     if (!cart) return;
     const head = document.createElement('div');
     head.className = 'recipe';
-    head.innerHTML = `<b>🛒 Gerobak</b><span>${this.cartCount()}/${CAP_CART}</span>`;
+    head.innerHTML = `<b>Gerobak</b><span>${this.cartCount()}/${CAP_CART}</span>`;
     const call = document.createElement('button');
     call.className = 'btn small';
     call.textContent = 'Panggil ke sini';
@@ -335,15 +336,15 @@ export const actionsMixin = {
         any = true;
         const b = document.createElement('button');
         b.className = 'btn small';
-        b.textContent = toCart ? `${ICON[k]} ${n} →` : `← ${ICON[k]} ${n}`;
+        b.innerHTML = toCart ? `${ico(k, 'sm')} ${n} &rarr;` : `&larr; ${ico(k, 'sm')} ${n}`;
         b.addEventListener('click', () => this.moveItem(k, toCart));
         box.appendChild(b);
       }
       if (!any) { const e = document.createElement('div'); e.className = 'hint'; e.textContent = '(kosong)'; box.appendChild(e); }
       c.appendChild(box);
     };
-    mk('Tas → Gerobak', null, true);
-    mk('Gerobak → Tas', null, false);
+  mk('Tas  Gerobak', null, true);
+  mk('Gerobak  Tas', null, false);
   },
 
   moveItem(k, toCart) {
@@ -414,7 +415,7 @@ export const actionsMixin = {
       if (this.p.on || this.inCave) { this.toast('Tidak bisa dorong gerobak di sini'); return; }
       this.unparkCart();
       this.hitch = true;
-      this.toast('🛒 Mendorong gerobak');
+      this.toast('Mendorong gerobak');
     } else {
       this.hitch = false;
       this.parkCart();
@@ -496,7 +497,7 @@ export const actionsMixin = {
       else if (n.type === 'rock') dmg = tool.rock;
       else if (n.type === 'ore') dmg = tool.ore;
       if (n.type === 'ore' && dmg <= 0) {
-        this.toastOnce('needpick', 'Butuh ⛏️ Beliung! Buat di 🎒 (tab Alat) lalu pegang di hotbar');
+  this.toastOnce('needpick', 'Butuh  Beliung! Buat di Tas (tab Alat) lalu pegang di hotbar');
         Audio.sfx('mine');
         return;
       }
@@ -512,7 +513,7 @@ export const actionsMixin = {
           Audio.sfx('fall');
           this.stats.chop++;
           this.give('kayu', 3 + ((Math.random() * 3) | 0) + (tool.tree >= 3 ? 1 : 0));
-          if (Math.random() < 0.35) this.give('serat', 1);
+          if (Math.random() < 0.75) this.give('serat', 1 + (Math.random() < 0.3 ? 1 : 0));
         } else if (n.type === 'ore') {
           this.stats.ore++;
           if (n.ore === 'coal') this.give('batubara', 2 + ((Math.random() * 3) | 0));
@@ -521,7 +522,7 @@ export const actionsMixin = {
           this.stats.mine++;
           this.stats.ore += this.inCave ? 1 : 0;
           this.give('batu', 2 + ((Math.random() * 2) | 0));
-        } else { this.give('buah', 2); this.give('serat', 1); }
+        } else { this.give('buah', 2); this.give('serat', 2); }
         this.updateQuest();
       }
     } else {
@@ -597,7 +598,7 @@ export const actionsMixin = {
     if (t < 2.5) { this.toast('Terlalu dekat, lempar lebih jauh'); return; }
     if (t > 17) { this.toast('Terlalu jauh'); return; }
     const x = e.x + d.x * t, z = e.z + d.z * t;
-    if (this.hf.sample(x, z) > -0.5) { this.toast('Lempar ke air yang dalam 🌊'); return; }
+    if (this.hf.sample(x, z) > -0.5) { this.toast('Lempar ke air yang dalam '); return; }
     const f = this.fish;
     f.st = 'wait';
     f.x = x; f.z = z;
@@ -619,7 +620,7 @@ export const actionsMixin = {
     this.bobber.position.set(x, 0.02, z);
     this.swing = 0.01;
     Audio.sfx('splash');
-    this.toast(f.bait ? '🎣 Umpan cacing dipasang, tunggu...' : '🎣 Tunggu ikan menggigit...');
+    this.toast(f.bait ? 'Umpan cacing dipasang, tunggu...' : 'Tunggu ikan menggigit...');
   },
 
   fishCancel() {
@@ -636,7 +637,7 @@ export const actionsMixin = {
     this.fishCancel();
     Audio.sfx('splash');
     this.give('ikan', big ? 2 : 1);
-    if (big) this.toast('🐟 Ikan besar!');
+    if (big) this.toast('Ikan besar!');
     this.updateQuest();
     void f;
   },
@@ -653,7 +654,7 @@ export const actionsMixin = {
       if (f.t <= 0) {
         f.st = 'bite';
         f.t = 1.5;
-        this.toast('🐟 Ikan menggigit! Tekan ✊ SEKARANG');
+        this.toast('Ikan menggigit! Tekan Serang SEKARANG');
         Audio.sfx('splash');
       }
     } else if (f.st === 'bite') {
@@ -687,14 +688,14 @@ export const actionsMixin = {
     if (!p.embFull) {
       if (this.waterAhead(6)) {
         p.embFull = true;
-        this.toast('🪣 Ember terisi air');
+        this.toast('Ember terisi air');
         Audio.sfx('splash');
       } else this.toast('Arahkan ember ke laut/air (dekat)');
     } else {
       p.embFull = false;
       p.thirst = Math.min(100, p.thirst + 45);
       this.stats.ember++;
-      this.toast('Glek glek... 💧 +45 minum');
+      this.toast('Glek glek...  +45 minum');
       Audio.sfx('drink');
       this.updateQuest();
     }
@@ -736,20 +737,20 @@ export const actionsMixin = {
     const raw = inv.daging + inv.ikan;
     let c = null;
     const door = !this.build && !this.sleeping && !this.driving && !this.busy ? this.aimDoor() : null;
-    if (this.sleeping) c = { id: 'wake', t: '😴 Bangun' };
-    else if (this.driving) c = { id: 'undrive', t: '⚓ Turun' };
-    else if (door) c = { id: 'door', t: door.o ? '🚪 Tutup' : '🚪 Buka', door };
-    else if (this.nearBed()) c = { id: 'sleep', t: '😴 Tidur' };
-    else if (this.nearHelm()) c = { id: 'drive', t: '🎡 Kemudi' };
-    else if (this.nearFurnace() && inv.bijih > 0) c = { id: 'smelt', t: '🔥 Lebur' };
-    else if (this.nearStove() && raw > 0) c = { id: 'stove', t: '🍲 Masak Sup' };
-    else if (this.nearFire() && raw > 0) c = { id: 'cook', t: '🔥 Masak' };
-    else if (this.cart && this.hitch) c = { id: 'unhitch', t: '🛒 Lepas' };
-    else if (this.cart && !this.inCave && Math.hypot(this.cart.x - this.p.x, this.cart.z - this.p.z) < 3.4) c = { id: 'hitch', t: '🛒 Dorong' };
-    else if (this.canDrink()) c = { id: 'drink', t: '💧 Minum' };
+    if (this.sleeping) c = { id: 'wake', ic: 'wake', t: 'Bangun' };
+    else if (this.driving) c = { id: 'undrive', ic: 'anchor', t: 'Turun' };
+    else if (door) c = { id: 'door', ic: 'door', t: door.o ? 'Tutup' : 'Buka', door };
+    else if (this.nearBed()) c = { id: 'sleep', ic: 'wake', t: 'Tidur' };
+    else if (this.nearHelm()) c = { id: 'drive', ic: 'wheel', t: 'Kemudi' };
+    else if (this.nearFurnace() && inv.bijih > 0) c = { id: 'smelt', ic: 'fire', t: 'Lebur' };
+    else if (this.nearStove() && raw > 0) c = { id: 'stove', ic: 'sup', t: 'Masak Sup' };
+    else if (this.nearFire() && raw > 0) c = { id: 'cook', ic: 'fire', t: 'Masak' };
+    else if (this.cart && this.hitch) c = { id: 'unhitch', ic: 'cart', t: 'Lepas' };
+    else if (this.cart && !this.inCave && Math.hypot(this.cart.x - this.p.x, this.cart.z - this.p.z) < 3.4) c = { id: 'hitch', ic: 'cart', t: 'Dorong' };
+    else if (this.canDrink()) c = { id: 'drink', ic: 'drop', t: 'Minum' };
     this.ctx = c;
     const b = $('btnCtx');
-    if (c) { b.textContent = c.t; b.classList.add('show'); } else b.classList.remove('show');
+    if (c) { setIcon(b, c.ic, c.t); b.classList.add('show'); } else b.classList.remove('show');
   },
 
   doCtx() {
@@ -767,7 +768,7 @@ export const actionsMixin = {
       if (this.drinkCd > 0) return;
       this.drinkCd = 0.6;
       p.thirst = Math.min(100, p.thirst + 30);
-      this.toast('Glek glek... 💧');
+      this.toast('Glek glek... ');
       Audio.sfx('drink');
     } else if (id === 'cook') {
       const a = p.inv.daging, b = p.inv.ikan;
@@ -788,7 +789,7 @@ export const actionsMixin = {
 
   cookStove() {
     const p = this.p;
-    if (!(p.inv.panci > 0)) { this.toast('Butuh 🍳 Panci! (🎒 tab Alat, perlu Besi)'); return; }
+    if (!(p.inv.panci > 0)) { this.toast('Butuh  Panci! (Tas, tab Alat, perlu Besi)'); return; }
     const raw = p.inv.daging + p.inv.ikan;
     const n = Math.min(raw, p.inv.kayu * 2);
     if (n <= 0) { this.toast('Butuh kayu bakar untuk kompor'); return; }
@@ -797,7 +798,7 @@ export const actionsMixin = {
     const d = Math.min(left, p.inv.daging); p.inv.daging -= d; left -= d;
     p.inv.ikan -= left;
     p.inv.sup += n;
-    this.toast(`🍲 ${n} Sup Lezat siap!`);
+    this.toast(`${n} Sup Lezat siap!`);
     Audio.sfx('cook');
     this.stats.cook++;
     const st = this.nearStove();
@@ -812,13 +813,13 @@ export const actionsMixin = {
   smelt() {
     const p = this.p;
     const n = Math.min(p.inv.bijih, p.inv.batubara + Math.floor(p.inv.kayu / 2));
-    if (n <= 0) { this.toast('Butuh Batu Bara ⚫ (atau 2 Kayu per bijih)'); return; }
+    if (n <= 0) { this.toast('Butuh Batu Bara  (atau 2 Kayu per bijih)'); return; }
     const coal = Math.min(n, p.inv.batubara);
     p.inv.batubara -= coal;
     p.inv.kayu -= (n - coal) * 2;
     p.inv.bijih -= n;
     this.give('besi', n, true);
-    this.toast(`🔩 ${n} Besi dilebur!`);
+    this.toast(`${n} Besi dilebur!`);
     Audio.sfx('cook');
     this.stats.smelt += n;
     this.updateQuest();
@@ -854,7 +855,7 @@ export const actionsMixin = {
         this.p.thirst = Math.max(10, this.p.thirst - 10);
         f.classList.remove('show');
         this.sleeping = false;
-        this.toast('Selamat pagi! Kamu merasa segar ☀️');
+        this.toast('Selamat pagi! Kamu merasa segar ');
         this.stats.sleep++;
         this.updateQuest();
         this.save();
@@ -907,7 +908,7 @@ export const actionsMixin = {
     p.thirst = Math.max(10, p.thirst - 10);
     this.stats.sleep++;
     this.wake(true);
-    this.toast('Selamat pagi! Semua pemain tidur, malam dilewati ☀️');
+    this.toast('Selamat pagi! Semua pemain tidur, malam dilewati ');
     this.updateQuest();
   },
 
@@ -919,7 +920,7 @@ export const actionsMixin = {
       this.sleepMsgT = 0.5;
       const total = this.remotes.size + 1;
       const n = Math.min(total, this.sleepers.size);
-      $('sleepMsgTxt').textContent = `😴 Tidur... ${n}/${total} pemain. Malam lewat kalau semua tidur.`;
+      $('sleepMsgTxt').textContent = ` Tidur... ${n}/${total} pemain. Malam lewat kalau semua tidur.`;
     }
   },
 
@@ -962,19 +963,19 @@ export const actionsMixin = {
     if (this.busy || this.inCave) return;
     this.fishCancel();
     if (this.hitch) this.setHitch(false);
-    this.fadeTo('⛏️ Masuk tambang...', () => {
+    this.fadeTo(' Masuk tambang...', () => {
       const p = this.p, m = this.mine;
       this.setCave(true, i);
       p.on = null;
       p.x = m.spawn.x; p.z = m.spawn.z; p.y = MINE_Y; p.vy = 0;
       p.yaw = m.spawn.yaw; p.pitch = 0;
-    }, () => this.toast(this.eq === 'obor' ? 'Tambang gelap. Cari bijih ⚫🟠!' : 'Gelap! Buat 🔦 Obor (🎒 tab Cahaya) & pegang di hotbar'));
+  }, () => this.toast(this.eq === 'obor' ? 'Tambang gelap. Cari bijih !' : 'Gelap! Buat  Obor (Tas, tab Cahaya) & pegang di hotbar'));
   },
 
   exitCave() {
     if (this.busy || !this.inCave) return;
     const c = this.caves[this.caveIdx] || this.caves[0];
-    this.fadeTo('☀️ Keluar tambang...', () => {
+    this.fadeTo(' Keluar tambang...', () => {
       const p = this.p;
       this.setCave(false, -1);
       p.x = c.x + c.ox * 3.2; p.z = c.z + c.oz * 3.2;
@@ -1005,7 +1006,7 @@ export const actionsMixin = {
       myId: this.net.myId,
       send: (m) => { if (this.net) this.net.send(m); },
       nameOf: (id) => (this.remotes.get(id) && this.remotes.get(id).name) || 'Pemain',
-      onSpeak: (names) => { $('voiceTag').textContent = names.length ? '🎙 ' + names.join(', ') : ''; },
+  onSpeak: (names) => { $('voiceTag').textContent = names.length ? ' ' + names.join(', ') : ''; },
     });
   },
 
@@ -1018,7 +1019,7 @@ export const actionsMixin = {
       const on = !this.voice.micOn;
       const res = await this.voice.setMic(on);
       $('btnMic').classList.toggle('on', !!res);
-      this.toast(res ? '🎤 Mic menyala — pemain lain bisa mendengarmu' : '🔇 Mic mati');
+      this.toast(res ? 'Mic menyala — pemain lain bisa mendengarmu' : 'Mic mati');
     } catch (e) {
       $('btnMic').classList.remove('on');
       this.toast('Mic gagal: izinkan akses mikrofon untuk aplikasi ini');
