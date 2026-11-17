@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { clamp, lerp, sleep } from './util.js';
 import { genHeights, makeTerrain, makeWater, makeSky, makeNature, HALF } from './world.js';
 import { Animals } from './animals.js';
-import { buildChar, SKINS } from './chars.js';
+import { buildChar, SKINS, normLook, lookFromSkin, packLook, unpackLook, resetPose, applyEmote, EMOTE_BY_ID } from './chars.js';
+import { emoteMixin } from './emotes.js';
 import { Audio } from './audio.js';
 import { ITEMS, ICON, STACK, CAP_BAG, CAP_CART, CRAFT, costText } from './items.js';
 import { BUILD, EDGE_KINDS, PIECE_LIGHT, pieceCols, createPiece, makeFire, makeGhostModel } from './pieces.js';
@@ -18,6 +19,7 @@ export { BUILD };
 const DAYLEN = 360;
 
 /* preset grafik */
+const VIEW = { dekat: 0.5, sedang: 1, jauh: 1.8, sangat: 3 };
 const GFX = {
   smooth: { pr: 0.85, prMin: 0.5, adapt: true, shadows: false, grass: false, fogN: 40, fogF: 150, cull: 55, birds: false, low: true, lights: 2 },
   standar: { pr: 1, shadows: false, grass: false, fogN: 60, fogF: 240, cull: 110, birds: true, low: false, lights: 3 },
@@ -42,6 +44,11 @@ export class Game {
     this.ray = new THREE.Raycaster();
     this.ac = new AbortController();
     this.def = SKINS[opts.skinId || 0] || SKINS[0];
+    this.myLook = normLook(opts.look || lookFromSkin(this.def));
+    this.lookStr = packLook(this.myLook);
+    this.pSeq = 0;
+    this.eye = new THREE.Vector3();
+    this.tp = false;
     this._f = new THREE.Vector3();
 
     this.p = {
@@ -82,6 +89,7 @@ export class Game {
     this.vessels = [];
     this.driving = null;
     this.remotes = new Map();
+    this.initEmote(this.myLook);
     this.sleepers = new Set();
     this.netT = 0;
     this.hudT = 0;
@@ -227,11 +235,12 @@ export class Game {
     this.r.shadowMap.enabled = q.shadows;
     this.r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.sky.setShadows(q.shadows);
-    this.sky.fogNear = q.fogN;
-    this.sky.fogFar = q.fogF;
+    const vm = VIEW[this.set.view] || 1;
+    this.sky.fogNear = q.fogN * vm;
+    this.sky.fogFar = q.fogF * vm;
     this.nature.setLow(q.low);
     this.nature.setGrass(q.grass && !this.inCave);
-    this.animals.setCull(q.cull);
+    this.animals.setCull(q.cull * vm);
     this.animals.setBirds(q.birds && !this.inCave);
     this.scene.traverse((o) => {
       if (o.isMesh && o.material && !Array.isArray(o.material)) o.material.needsUpdate = true;
@@ -509,6 +518,9 @@ export class Game {
     btn('btnPause', () => this.openPause());
     btn('btnMic', () => this.toggleMic());
     btn('btnChat', () => this.openChat());
+    btn('btnEmote', () => this.openEmote());
+    $('emoteClose').addEventListener('click', () => this.closeEmote(), sig);
+    $('emoteWheel').addEventListener('pointerdown', (e) => { if (e.target === $('emoteWheel')) this.closeEmote(); }, sig);
     $('bagClose').addEventListener('click', () => this.closeBag(), sig);
     $('pauseResume').addEventListener('click', () => this.closePause(), sig);
     $('pauseSettings').addEventListener('click', () => this.o.openSettings && this.o.openSettings(), sig);
@@ -829,7 +841,7 @@ export class Game {
   }
 
   aim() {
-    const e = this.cam.position;
+    const e = this.eye;
     const d = this.fwd();
     let hit = null;
     for (let s = 0.6; s <= 7; s += 0.25) {
@@ -935,7 +947,7 @@ export class Game {
 
   place() {
     if (this.sel === 'bongkar') {
-      this.ray.set(this.cam.position, this.fwd());
+      this.ray.set(this.eye, this.fwd());
       this.ray.far = 6;
       const hs = this.ray.intersectObjects(this.pieceRoots(), true).filter((h) => h.object.userData.piece);
       if (!hs.length) return;
@@ -1178,8 +1190,19 @@ export class Game {
     }
     const bob = this.moving ? Math.sin(this.bobT) * (swim2 ? 0.05 : 0.035) : 0;
     const eye = this.sleeping ? 0.75 : lerp(1.62, 1.12, this.crouchT);
-    this.cam.position.set(p.x, p.y + eye + bob, p.z);
+    const ey = p.y + eye + bob;
+    this.eye.set(p.x, ey, p.z);
     this.cam.rotation.set(p.pitch, p.yaw, 0);
+    /* kamera: kepala (orang pertama) atau belakang-atas (orang ketiga); saat emote otomatis ke belakang */
+    this.tp = (this.set.cam === 'tp' || !!this.em) && !this.sleeping;
+    if (this.tp) {
+      const dist = this.inCave ? 1.9 : 3.3;
+      const cp = Math.cos(p.pitch);
+      const fx = -Math.sin(p.yaw) * cp, fy = Math.sin(p.pitch), fz = -Math.cos(p.yaw) * cp;
+      let cx = p.x - fx * dist, cy = ey + 0.45 - fy * dist, cz = p.z - fz * dist;
+      if (!this.inCave) { const gh = this.terr(cx, cz) + 0.35; if (cy < gh) cy = gh; }
+      this.cam.position.set(cx, cy, cz);
+    } else this.cam.position.copy(this.eye);
   }
 
   /* ================= SURVIVAL ================= */
@@ -1325,7 +1348,9 @@ export class Game {
     this.handR.rotation.x = 0.12 - sw * 1.0;
     this.handR.position.y = this.handR.userData.base.y + sw * 0.06 + (this.moving ? Math.sin(this.bobT * 1) * 0.01 : 0);
     this.handL.position.y = this.handL.userData.base.y + (this.moving ? Math.sin(this.bobT + 1.5) * 0.012 : 0);
-    this.handR.visible = this.handL.visible = !this.sleeping && !this.driving;
+    this.handR.visible = this.handL.visible = !this.sleeping && !this.driving && !this.tp;
+    this.updateSelfModel(dt);
+    this.updateBubbles(dt);
     if (this.heldFlame) {
       const s = 0.85 + Math.random() * 0.35;
       this.heldFlame.scale.set(s, s * (0.9 + Math.random() * 0.3), s);
@@ -1357,6 +1382,7 @@ export class Game {
       if (this.netT <= 0) {
         this.netT = 0.1;
         const m = { t: 'p', n: this.o.name, s: this.def.id, x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), r: +p.yaw.toFixed(2), m: this.moving ? 1 : 0 };
+        if (this.pSeq++ % 25 === 0) m.cd = this.lookStr;
         if (this.crouch) m.c = 1;
         if (this.sleeping && this.sleepBed) { m.sl = this.sleepBed.r + 1; m.sy = +(this.sleepBed.vessel ? this.sleepBed.vessel.yaw : 0).toFixed(2); }
         if (this.cart) m.ct = [+this.cart.x.toFixed(1), +this.cart.z.toFixed(1), +this.cart.yaw.toFixed(2)];
@@ -1387,7 +1413,7 @@ export class Game {
   updateLights(dt) {
     this.lightT -= dt;
     if (this.lightT <= 0) { this.lightT = 0.3; this.collectLights(); }
-    const p = this.p, cam = this.cam.position;
+    const p = this.p, cam = this.eye;
     const night = this.inCave ? 1 : 1 - this.sky.day;
     const list = [];
     if (this.eq === 'obor' && this.p.inv.obor > 0 && !this.sleeping) {
@@ -1447,21 +1473,39 @@ export class Game {
     if (m.t === 'p') {
       let r = this.remotes.get(id);
       if (!r) {
-        const g = buildChar(SKINS[m.s] || SKINS[0]);
+        const g = buildChar((m.cd && unpackLook(m.cd)) || SKINS[m.s] || SKINS[0]);
         g.rotation.order = 'YXZ';
         g.add(this.makeLabel(m.n || 'Pemain'));
         this.scene.add(g);
-        r = { g, x: m.x, y: m.y, z: m.z, ry: m.r, mv: 0, t: 0, seen: 0, name: m.n || 'Pemain', sl: 0, sy: 0, lie: 0, crouch: 0 };
+        r = { g, x: m.x, y: m.y, z: m.z, ry: m.r, mv: 0, t: 0, seen: 0, name: m.n || 'Pemain', sl: 0, sy: 0, lie: 0, crouch: 0, cd: m.cd || '' };
         this.remotes.set(id, r);
         this.toast((m.n || 'Pemain') + ' bergabung');
         Audio.sfx('join');
         if (this.voice) this.voice.peerSeen(id);
+      }
+      if (m.cd && m.cd !== r.cd) {
+        /* tampilan karakter berubah / baru diterima: bangun ulang model */
+        const lk = unpackLook(m.cd);
+        if (lk) {
+          this.scene.remove(r.g);
+          this.clearBubble(r.g);
+          const g2 = buildChar(lk);
+          g2.rotation.order = 'YXZ';
+          g2.add(this.makeLabel(r.name));
+          this.scene.add(g2);
+          r.g = g2; r.cd = m.cd;
+        }
       }
       r.tx = m.x; r.ty = m.y; r.tz = m.z; r.try = m.r; r.mv = m.m;
       r.sl = m.sl || 0; r.sy = m.sy || 0; r.cr = m.c ? 1 : 0;
       if (m.ct) this.remoteCart(r, m.ct);
       else if (r.cartMesh) { this.scene.remove(r.cartMesh); r.cartMesh = null; }
       r.seen = performance.now();
+    } else if (m.t === 'em') {
+      const r = this.remotes.get(id);
+      if (!r) return;
+      if (m.i && EMOTE_BY_ID[m.i]) { r.em = { id: m.i, t: 0 }; this.addBubble(r.g, EMOTE_BY_ID[m.i].icon); }
+      else { r.em = null; resetPose(r.g); }
     } else if (m.t === 'b') {
       const V = m.v ? this.vesselById(m.v) : null;
       if (m.v && !V) return;
@@ -1565,7 +1609,11 @@ export class Game {
       r.t += dt * (r.mv && !r.sl ? 9 : 0);
       const sw = r.mv && !r.sl ? Math.sin(r.t) * 0.7 : 0;
       const u = r.g.userData;
-      u.legL.rotation.x = sw; u.legR.rotation.x = -sw; u.armL.rotation.x = -sw; u.armR.rotation.x = sw;
+      if (r.em && !r.sl) {
+        r.em.t += dt;
+        if (r.mv || !applyEmote(r.g, r.em.id, r.em.t)) { r.em = null; resetPose(r.g); }
+      }
+      if (!r.em) { u.legL.rotation.x = sw; u.legR.rotation.x = -sw; u.armL.rotation.x = -sw; u.armR.rotation.x = sw; }
     }
   }
 
@@ -1614,6 +1662,7 @@ export class Game {
     this.r.shadowMap.enabled = false;
     $('panelBag').classList.remove('show');
     $('panelPause').classList.remove('show');
+    $('emoteWheel').classList.remove('show');
     $('panelDead').classList.remove('show');
     $('fade').classList.remove('show');
     $('chatBar').classList.remove('show');
@@ -1624,4 +1673,4 @@ export class Game {
   }
 }
 
-Object.assign(Game.prototype, vesselMixin, actionsMixin);
+Object.assign(Game.prototype, vesselMixin, actionsMixin, emoteMixin);

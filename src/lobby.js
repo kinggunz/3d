@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { buildChar, SKINS } from './chars.js';
+import { buildChar, SKINS, idlePose, resetPose, lookFromSkin, normLook, unpackLook } from './chars.js';
 import { mulberry32 } from './util.js';
 
 export class Lobby {
@@ -114,15 +114,84 @@ export class Lobby {
     this.scene.add(this.flyPts);
 
     this.char = null;
+    this.crowd = [];
+    this.mode = 'idle'; /* idle | edit | crowd */
+    this.editYaw = 0;
+    this.drag = false;
     this.t = 0;
-    this.setSkin(SKINS[0]);
+    this.setLook(lookFromSkin(SKINS[0]));
   }
 
-  setSkin(d) {
+  setLook(d) {
     if (this.char) this.scene.remove(this.char);
     this.char = buildChar(d);
-    this.char.scale.setScalar(1.1);
+    this.char.scale.setScalar(this.mode === 'edit' ? 1.3 : 1.1);
+    this.char.visible = this.mode !== 'crowd';
+    this.char.position.set(this.mode === 'edit' ? -2.0 : 0, 0, 0);
     this.scene.add(this.char);
+  }
+  setSkin(d) { this.setLook(lookFromSkin(d)); }
+
+  /* mode: 'idle' (lobi), 'edit' (editor karakter di sisi kiri), 'crowd' (semua pemain room di tengah) */
+  setMode(m) {
+    this.mode = m;
+    if (this.char) {
+      this.char.visible = m !== 'crowd';
+      this.char.scale.setScalar(m === 'edit' ? 1.3 : 1.1);
+      this.char.position.set(m === 'edit' ? -2.0 : 0, 0, 0);
+    }
+    if (m !== 'crowd') this.clearCrowd();
+    this.cam.position.set(0, m === 'crowd' ? 1.6 : 1.35, m === 'crowd' ? 7.2 : 5.4);
+    this.cam.lookAt(0, m === 'crowd' ? 1.1 : 1.05, 0);
+  }
+
+  clearCrowd() {
+    for (const c of this.crowd) this.scene.remove(c.g);
+    this.crowd = [];
+  }
+
+  nameSprite(text) {
+    const cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 64;
+    const c = cv.getContext('2d');
+    c.font = 'bold 34px sans-serif';
+    c.textAlign = 'center';
+    c.fillStyle = 'rgba(0,0,0,.55)';
+    c.fillRect(0, 8, 256, 48);
+    c.fillStyle = '#fff';
+    c.fillText(String(text).slice(0, 14), 128, 44);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
+    sp.scale.set(1.7, 0.42, 1);
+    sp.position.y = 2.55;
+    sp.renderOrder = 5;
+    return sp;
+  }
+
+  /* pemain di room: berdiri berjajar di tengah dengan pose bebas */
+  setCrowd(players, myId, myLook) {
+    this.setMode('crowd');
+    const key = (players || []).map((p) => p.id + ':' + (p.cd || p.skin) + ':' + p.name).join('|') + '#' + (myLook || '').length;
+    if (this._crowdKey === key) return;
+    this._crowdKey = key;
+    this.clearCrowd();
+    const list = players || [];
+    const n = list.length;
+    list.forEach((p, i) => {
+      const look = (p.id === myId && myLook) ? myLook : (p.cd && unpackLook(p.cd)) || lookFromSkin(SKINS[p.skin] || SKINS[0]);
+      const g = buildChar(look);
+      g.scale.setScalar(1.05);
+      const off = i - (n - 1) / 2;
+      g.position.set(off * 1.7, 0, Math.abs(off) * -0.35);
+      g.rotation.y = -off * 0.16;
+      g.add(this.nameSprite(p.name || 'Pemain'));
+      this.scene.add(g);
+      this.crowd.push({ g, style: (i * 2 + 1 + (p.name || '').length) % 5, base: -off * 0.16 });
+    });
+  }
+
+  leaveCrowd() {
+    this._crowdKey = null;
+    this.setMode('idle');
   }
 
   resize() {
@@ -133,11 +202,21 @@ export class Lobby {
   update(dt) {
     this.t += dt;
     const c = this.char;
-    c.rotation.y = Math.sin(this.t * 0.6) * 0.45;
-    c.position.y = Math.sin(this.t * 2) * 0.015;
-    const u = c.userData;
-    u.armL.rotation.x = Math.sin(this.t * 2) * 0.08;
-    u.armR.rotation.x = -Math.sin(this.t * 2) * 0.08;
+    if (this.mode === 'edit') {
+      if (!this.drag) this.editYaw += dt * 0.35;
+      c.rotation.y = this.editYaw;
+      c.position.y = 0;
+      idlePose(c, this.t, 0);
+    } else if (this.mode === 'crowd') {
+      for (const k of this.crowd) {
+        k.g.rotation.y = k.base + Math.sin(this.t * 0.5 + k.style) * 0.18;
+        idlePose(k.g, this.t + k.style, k.style);
+      }
+    } else {
+      c.rotation.y = Math.sin(this.t * 0.6) * 0.45;
+      c.position.y = Math.sin(this.t * 2) * 0.015;
+      idlePose(c, this.t, 0);
+    }
     const f = 0.85 + Math.random() * 0.3;
     this.flame.scale.set(f, f * (0.9 + Math.random() * 0.3), f);
     this.fireLight.intensity = 2.2 + Math.random() * 0.8;

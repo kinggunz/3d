@@ -145,7 +145,7 @@ export class Net {
           const m = dec(buf);
           if (!m) return;
           const had = this.roster.has(id);
-          this.roster.set(id, { id, name: m.name, skin: m.skin, t: m.t || 0 });
+          this.roster.set(id, { id, name: m.name, skin: m.skin, cd: m.cd || '', t: m.t || 0 });
           if (!had) this._lobbyChanged();
         }
       } else if (tail === `rooms/${this.roomId}`) {
@@ -178,7 +178,7 @@ export class Net {
 
   _announce() {
     this.announced = true;
-    this.c.publish(`${NS}/r/${this.roomId}/p/${this.myId}`, enc({ name: this.me.name, skin: this.me.skin, t: this.joinT }), { retain: true });
+    this.c.publish(`${NS}/r/${this.roomId}/p/${this.myId}`, enc({ name: this.me.name, skin: this.me.skin, cd: this.me.cd || '', t: this.joinT }), { retain: true });
   }
 
   async _open(roomId, me, willRoom) {
@@ -188,7 +188,7 @@ export class Net {
     const wills = { topic: `${NS}/r/${roomId}/p/${this.myId}`, payload: '', retain: true, qos: 0 };
     this.c = await openClient({ will: wills });
     this._wire();
-    this.roster.set(this.myId, { id: this.myId, name: me.name, skin: me.skin, t: this.joinT });
+    this.roster.set(this.myId, { id: this.myId, name: me.name, skin: me.skin, cd: me.cd || '', t: this.joinT });
   }
 
   /* host: buat room. pw kosong = publik (muncul di daftar global), pw terisi = private */

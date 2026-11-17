@@ -5,7 +5,7 @@ const $ = (id) => document.getElementById(id);
 export const HUD_ITEMS = [
   ['joy', 'Joystick'], ['btnAct', 'Aksi'], ['btnJump', 'Lompat'], ['btnCrouch', 'Jongkok'],
   ['btnBuild', 'Bangun'], ['btnEat', 'Makan'], ['btnCtx', 'Tombol Konteks'], ['btnMic', 'Mic'],
-  ['btnChat', 'Chat'], ['btnBag', 'Tas'], ['btnPause', 'Jeda'], ['hotbar', 'Hotbar Alat'],
+  ['btnChat', 'Chat'], ['btnEmote', 'Emote'], ['btnBag', 'Tas'], ['btnPause', 'Jeda'], ['hotbar', 'Hotbar Alat'],
   ['stats', 'Status'], ['clockTxt', 'Jam'], ['quest', 'Misi'], ['buildBar', 'Bar Bangun'], ['chatFeed', 'Pesan Chat'],
 ];
 

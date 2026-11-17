@@ -5,7 +5,8 @@ import { Game } from './game.js';
 import { Net, Browse, MAXP, OW_SEED, WORLD_MAX } from './net.js';
 import { listWorlds, createWorld, deleteWorld, MAX_WORLDS } from './worlds.js';
 import { Audio } from './audio.js';
-import { SKINS, drawPreview } from './chars.js';
+import { SKINS, drawPreview, lookFromSkin, normLook, packLook } from './chars.js';
+import { openCharEditor } from './charedit.js';
 import { initTextures } from './textures.js';
 import { sleep } from './util.js';
 import { hydrate, ico, setIcon } from './icons.js';
@@ -42,11 +43,14 @@ document.addEventListener('click', (e) => {
   if (e.target.closest && e.target.closest('.btn, .bigRow, .iconBtn, .seg button, .vItem, .roomRow')) Audio.sfx('click');
 }, true);
 
-const settings = Object.assign({ gfx: 'standar', fps: 60, sens: 1, music: 0.6, sfx: 0.8 }, store.get('ps_settings', {}));
+const settings = Object.assign({ gfx: 'standar', fps: 60, sens: 1, music: 0.6, sfx: 0.8, view: 'sedang', cam: 'fp' }, store.get('ps_settings', {}));
 Audio.setVolumes(settings.music, settings.sfx);
 let account = store.get('ps_account', null);
 let skinId = store.get('ps_skin', 0);
 if (!SKINS[skinId]) skinId = 0;
+let customLook = store.get('ps_look', null); /* hasil Editor Karakter; null = pakai karakter bawaan */
+const curLook = () => normLook(customLook || lookFromSkin(SKINS[skinId]));
+const lookName = () => (customLook ? 'Karakterku' : SKINS[skinId].name);
 
 const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -58,7 +62,7 @@ let net = null;
 let inRoom = false;
 let mode = 'none';
 
-const SCREENS = ['sLoad', 'sIntro', 'sLobby', 'sWorlds', 'sNewWorld', 'sOnline', 'sCreate', 'sFind', 'sRoom', 'hud'];
+const SCREENS = ['sLoad', 'sIntro', 'sLobby', 'sWorlds', 'sNewWorld', 'sOnline', 'sCreate', 'sFind', 'sRoom', 'sChar', 'hud'];
 let browse = null;
 function stopBrowse() {
   if (browse) { browse.close(); browse = null; }
@@ -394,6 +398,9 @@ function refreshSettingsUI() {
   $('sensRange').value = settings.sens;
   $('musRange').value = settings.music;
   $('sfxRange').value = settings.sfx;
+  for (const [id, v] of [['viewNear', 'dekat'], ['viewMid', 'sedang'], ['viewFar', 'jauh'], ['viewMax', 'sangat']]) $(id).classList.toggle('on', settings.view === v);
+  $('camFp').classList.toggle('on', settings.cam !== 'tp');
+  $('camTp').classList.toggle('on', settings.cam === 'tp');
 }
 function saveSettings() {
   store.set('ps_settings', settings);
@@ -408,6 +415,9 @@ $('gfxSmooth').onclick = () => { settings.gfx = 'smooth'; saveSettings(); };
 $('gfxStd').onclick = () => { settings.gfx = 'standar'; saveSettings(); };
 $('gfxUlt').onclick = () => { settings.gfx = 'ultra'; saveSettings(); };
 for (const f of [30, 60, 120]) $('fps' + f).onclick = () => { settings.fps = f; saveSettings(); };
+for (const [id, v] of [['viewNear', 'dekat'], ['viewMid', 'sedang'], ['viewFar', 'jauh'], ['viewMax', 'sangat']]) $(id).onclick = () => { settings.view = v; saveSettings(); };
+$('camFp').onclick = () => { settings.cam = 'fp'; saveSettings(); };
+$('camTp').onclick = () => { settings.cam = 'tp'; saveSettings(); };
 $('sensRange').oninput = (e) => { settings.sens = parseFloat(e.target.value); store.set('ps_settings', settings); };
 $('musRange').oninput = (e) => { settings.music = parseFloat(e.target.value); Audio.setVolumes(settings.music, settings.sfx); store.set('ps_settings', settings); };
 $('sfxRange').oninput = (e) => { settings.sfx = parseFloat(e.target.value); Audio.setVolumes(settings.music, settings.sfx); store.set('ps_settings', settings); };
@@ -422,17 +432,30 @@ function toLobby() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.setSize(innerWidth, innerHeight);
   $('lbName').textContent = account.name;
-  $('lbChar').textContent = SKINS[skinId].name;
-  lobby.setSkin(SKINS[skinId]);
+  $('lbChar').textContent = lookName();
+  lobby.setMode('idle');
+  lobby.setLook(curLook());
   lobby.resize();
 }
 
 function renderVault() {
   const g = $('vaultGrid');
   g.innerHTML = '';
+  if (customLook) {
+    const el = document.createElement('div');
+    el.className = 'vItem sel';
+    const cv = document.createElement('canvas');
+    cv.width = 140; cv.height = 140;
+    drawPreview(cv, customLook);
+    el.appendChild(cv);
+    const b = document.createElement('b');
+    b.textContent = 'Karakterku';
+    el.appendChild(b);
+    g.appendChild(el);
+  }
   for (const d of SKINS) {
     const el = document.createElement('div');
-    el.className = 'vItem' + (d.id === skinId ? ' sel' : '');
+    el.className = 'vItem' + (!customLook && d.id === skinId ? ' sel' : '');
     const cv = document.createElement('canvas');
     cv.width = 140; cv.height = 140;
     drawPreview(cv, d);
@@ -442,9 +465,11 @@ function renderVault() {
     el.appendChild(b);
     el.onclick = () => {
       skinId = d.id;
+      customLook = null;
       store.set('ps_skin', skinId);
-      lobby.setSkin(d);
-      $('lbChar').textContent = d.name;
+      store.set('ps_look', null);
+      lobby.setLook(curLook());
+      $('lbChar').textContent = lookName();
       $('roomMe').textContent = account.name;
       renderVault();
     };
@@ -456,6 +481,26 @@ $('lbSet').onclick = openSettings;
 $('lbGuide').onclick = () => openGuide();
 $('lbVault').onclick = () => { renderVault(); $('mVault').classList.add('show'); };
 $('vaultClose').onclick = () => $('mVault').classList.remove('show');
+
+/* ================= EDITOR KARAKTER ================= */
+function openEditor() {
+  $('mVault').classList.remove('show');
+  mode = 'lobby';
+  show('sChar');
+  openCharEditor({
+    lobby,
+    look: curLook(),
+    onSave: (l) => {
+      customLook = l;
+      store.set('ps_look', l);
+      toLobby();
+      flash('Karakter disimpan');
+    },
+    onCancel: () => toLobby(),
+  });
+}
+$('lbEdit').onclick = openEditor;
+$('vaultEdit').onclick = openEditor;
 
 /* ================= DUNIA SAYA ================= */
 const dateTxt = (t) => { try { return new Date(t).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }); } catch (e) { return ''; } };
@@ -551,7 +596,7 @@ async function hostWorldInBackground(g, wd) {
 }
 
 /* ================= ONLINE ================= */
-const myInfo = () => ({ name: account.name, skin: skinId });
+const myInfo = () => ({ name: account.name, skin: skinId, cd: packLook(curLook()) });
 
 function renderRoomList(list) {
   const w = $('roomList');
@@ -596,6 +641,10 @@ $('crBack').onclick = openOnlineHub;
 $('fnBack').onclick = openOnlineHub;
 
 function renderSlots(pl) {
+  if (lobby && inRoom) {
+    lobby.setCrowd(pl, net && net.myId, curLook());
+    $('roomCount').textContent = pl.length + ' pemain di room';
+  }
   const w = $('slots');
   w.innerHTML = '';
   const hostId = net && net.info ? net.info.host : null;
@@ -625,13 +674,15 @@ function setupRoom(room, isHost) {
   net.onLobby = renderSlots;
   net.onStart = (m) => beginOnline(m.seed, net.players, false);
   net.onClosed = () => { if (inRoom) leaveRoom('Host menutup room'); };
-  renderSlots(net.players);
   inRoom = true;
+  mode = 'lobby';
+  renderSlots(net.players);
   show('sRoom');
 }
 
 function leaveRoom(msg) {
   inRoom = false;
+  if (lobby) lobby.leaveCrowd();
   if (net) { net.close(); net = null; }
   openOnlineHub();
   if (msg) flash(msg);
@@ -728,6 +779,7 @@ $('roomGo').onclick = () => {
 
 function beginOnline(seed, players) {
   inRoom = false;
+  if (lobby) lobby.leaveCrowd();
   startGame({ online: true, seed, players });
 }
 
@@ -743,6 +795,7 @@ async function startGame(o) {
     open: !!o.open,
     name: account.name,
     skinId,
+    look: curLook(),
     openSettings,
     openGuide,
     onExit: exitGame,
@@ -826,7 +879,7 @@ async function boot() {
     await sleep(700);
     p(35, 'Menyiapkan lobi...');
     lobby = new Lobby();
-    lobby.setSkin(SKINS[skinId]);
+    lobby.setLook(curLook());
     await sleep(700);
     p(65, 'Membangun dunia survival...');
     await sleep(800);

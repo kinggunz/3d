@@ -127,6 +127,51 @@ const D = {
   b_setir(g) { D.wheel(g); },
   b_bongkar(g) { D.hammer(g); },
 };
+
+/* ---------- ikon emote ---------- */
+const limb = (g, x, y, a, len, col) => {
+  const r = (a * Math.PI) / 180;
+  const ex = x + Math.sin(r) * len, ey = y + Math.cos(r) * len;
+  ln(g, x, y, ex, ey, 9, INK); ln(g, x, y, ex, ey, 5, col);
+  return [ex, ey];
+};
+/* orang-orangan: sudut 0 = lurus ke bawah, 90 = ke kanan layar, 180 = ke atas */
+const fig = (g, o) => {
+  const sx = o.x || 32, sy = o.y || 0;
+  const cl = '#4a7bd6', cs = '#f2c28f';
+  limb(g, sx, 40 + sy, o.lL === undefined ? -12 : o.lL, 20, '#2f4f9f');
+  limb(g, sx, 40 + sy, o.lR === undefined ? 12 : o.lR, 20, '#2f4f9f');
+  ln(g, sx, 24 + sy, sx, 42 + sy, 12, INK); ln(g, sx, 24 + sy, sx, 42 + sy, 8, cl);
+  const aL = limb(g, sx, 27 + sy, o.aL === undefined ? -10 : o.aL, 18, cs);
+  const aR = limb(g, sx, 27 + sy, o.aR === undefined ? 10 : o.aR, 18, cs);
+  ci(g, sx, 15 + sy, 8, cs);
+  return [aL, aR];
+};
+Object.assign(D, {
+  e_wave(g) { fig(g, { aR: 150, aL: -15 }); g.lineWidth = 2.5; g.beginPath(); g.arc(50, 8, 7, -1.2, 0.6); g.stroke(); g.beginPath(); g.arc(50, 8, 12, -1.0, 0.4); g.stroke(); g.lineWidth = 3; },
+  e_dance(g) { fig(g, { aR: 140, aL: -140, lL: -28, lR: 22, x: 32 }); ln(g, 10, 52, 16, 58, 3); ln(g, 54, 52, 48, 58, 3); },
+  e_clap(g) { fig(g, { aL: -150 + 150 - 30 + 148, aR: 148 - 148 + 30 }); const x = 32; ln(g, x - 2, 30, x + 2, 30, 1, INK); for (const a of [-0.7, 0, 0.7]) ln(g, 32 + Math.sin(a) * 6, 22 + -Math.cos(a) * 2, 32 + Math.sin(a) * 14, 14 - Math.cos(a) * 4, 3, GOLD); },
+  e_bow(g) { limb(g, 24, 44, -10, 20, '#2f4f9f'); limb(g, 24, 44, 10, 20, '#2f4f9f'); ln(g, 24, 44, 40, 30, 12, INK); ln(g, 24, 44, 40, 30, 8, '#4a7bd6'); limb(g, 40, 32, 150, 16, '#f2c28f'); ci(g, 48, 24, 8, '#f2c28f'); },
+  e_cheer(g) { fig(g, { aR: 165, aL: -165, lL: -22, lR: 22 }); for (const a of [20, 40, 60]) ln(g, a, 8, a - 4, 2, 3, GOLD); },
+  e_point(g) { const [, aR] = fig(g, { aR: 90, aL: -10 }); poly(g, [[aR[0] + 2, aR[1] - 6], [aR[0] + 12, aR[1]], [aR[0] + 2, aR[1] + 6]], GOLD); },
+  e_sit(g) { rr(g, 8, 44, 26, 14, 2, WOOD); ln(g, 22, 22, 22, 42, 12, INK); ln(g, 22, 22, 22, 42, 8, '#4a7bd6'); ln(g, 22, 42, 46, 42, 9, INK); ln(g, 22, 42, 46, 42, 5, '#2f4f9f'); ln(g, 46, 42, 46, 56, 9, INK); ln(g, 46, 42, 46, 56, 5, '#2f4f9f'); limb(g, 22, 27, 40, 16, '#f2c28f'); ci(g, 22, 13, 8, '#f2c28f'); },
+  e_spin(g) { fig(g, { aR: 100, aL: -100 }); g.beginPath(); g.arc(32, 32, 27, 0.3, 2.2); g.lineWidth = 4; g.strokeStyle = GOLD; g.stroke(); g.beginPath(); g.arc(32, 32, 27, 3.5, 5.3); g.stroke(); st(g); },
+  e_sleep(g) { rr(g, 4, 40, 56, 14, 4, '#d8584c'); rr(g, 6, 32, 16, 12, 5, '#f4ecd8'); ci(g, 14, 32, 8, '#f2c28f'); g.font = 'bold 20px sans-serif'; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeText('z', 38, 22); g.fillText('z', 38, 22); g.font = 'bold 14px sans-serif'; g.strokeText('z', 50, 12); g.fillText('z', 50, 12); },
+  e_kick(g) { limb(g, 28, 40, -8, 22, '#2f4f9f'); limb(g, 28, 40, 80, 24, '#2f4f9f'); ln(g, 28, 24, 28, 42, 12, INK); ln(g, 28, 24, 28, 42, 8, '#4a7bd6'); limb(g, 28, 27, -50, 16, '#f2c28f'); limb(g, 28, 27, 130, 16, '#f2c28f'); ci(g, 28, 15, 8, '#f2c28f'); ln(g, 56, 38, 62, 34, 3, GOLD); ln(g, 56, 46, 63, 48, 3, GOLD); },
+  e_laugh(g) { ci(g, 32, 32, 25, '#ffd54a'); g.beginPath(); g.arc(22, 26, 5, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); g.beginPath(); g.arc(42, 26, 5, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); g.beginPath(); g.moveTo(16, 36); g.quadraticCurveTo(32, 62, 48, 36); g.closePath(); fillStroke(g, '#7a1f1f'); g.beginPath(); g.moveTo(22, 40); g.quadraticCurveTo(32, 44, 42, 40); g.quadraticCurveTo(32, 50, 22, 40); g.fillStyle = '#fff'; g.fill(); },
+  e_angry(g) { ci(g, 32, 32, 25, '#ff6a4a'); ln(g, 14, 20, 28, 26, 4); ln(g, 50, 20, 36, 26, 4); ci(g, 22, 31, 3, INK); ci(g, 42, 31, 3, INK); g.beginPath(); g.arc(32, 52, 10, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); },
+  e_cry(g) { ci(g, 32, 32, 25, '#ffd54a'); ci(g, 22, 27, 3, INK); ci(g, 42, 27, 3, INK); g.beginPath(); g.arc(32, 52, 9, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); for (const x of [18, 46]) { g.beginPath(); g.moveTo(x, 34); g.quadraticCurveTo(x + 5, 44, x, 52); g.quadraticCurveTo(x - 5, 44, x, 34); g.closePath(); fillStroke(g, BLUE); } },
+  e_q(g) { ci(g, 32, 32, 26, '#7aa7ff'); g.font = 'bold 44px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.lineWidth = 4; g.strokeText('?', 32, 34); g.fillText('?', 32, 34); },
+  e_ex(g) { ci(g, 32, 32, 26, '#ff6a5a'); g.font = 'bold 44px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.lineWidth = 4; g.strokeText('!', 32, 34); g.fillText('!', 32, 34); },
+  e_star(g) { const p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 12 : 28; p.push([32 + Math.cos(a) * r, 34 + Math.sin(a) * r]); } poly(g, p, '#ffd54a'); ci(g, 32, 34, 4, '#fff6c0'); },
+  e_thumb(g) { rr(g, 8, 30, 14, 26, 3, '#4a7bd6'); g.beginPath(); g.moveTo(24, 32); g.lineTo(34, 8); g.quadraticCurveTo(42, 8, 40, 20); g.lineTo(38, 28); g.lineTo(54, 28); g.quadraticCurveTo(60, 30, 58, 36); g.lineTo(56, 52); g.quadraticCurveTo(54, 58, 48, 58); g.lineTo(24, 58); g.closePath(); fillStroke(g, '#f2c28f'); },
+  e_sweat(g) { ci(g, 30, 34, 24, '#ffd54a'); g.beginPath(); g.arc(20, 30, 4, 0, 7); g.stroke(); ln(g, 38, 28, 48, 28, 3); ln(g, 20, 48, 40, 46, 3); g.beginPath(); g.moveTo(52, 8); g.quadraticCurveTo(60, 20, 52, 26); g.quadraticCurveTo(44, 20, 52, 8); g.closePath(); fillStroke(g, BLUE); },
+  e_music(g) { ln(g, 24, 46, 24, 12, 4); ln(g, 48, 40, 48, 8, 4); ln(g, 24, 12, 48, 8, 6); ci(g, 18, 48, 8, '#fff'); ci(g, 42, 42, 8, '#fff'); },
+  emote(g) { ci(g, 32, 32, 25, '#ffd54a'); ci(g, 23, 26, 3.5, INK); ci(g, 41, 26, 3.5, INK); g.beginPath(); g.arc(32, 36, 13, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke(); },
+  person(g) { ci(g, 32, 18, 10, '#f0c8a0'); poly(g, [[16, 56], [18, 34], [46, 34], [48, 56]], '#2e8b57'); poly(g, [[20, 56], [20, 44], [44, 44], [44, 56]], '#4aa8e0'); },
+  page(g) { poly(g, [[14, 10], [50, 10], [50, 54], [14, 54]], '#f6eccb'); for (let i = 0; i < 4; i++) ln(g, 20, 20 + i * 9, 44, 20 + i * 9, 2.5, '#8a6a3a'); },
+});
+
 /* nama lain yang dipakai sama */
 D.makan = D.eat;
 D.setting = D.gear;

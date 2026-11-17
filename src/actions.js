@@ -458,7 +458,7 @@ export const actionsMixin = {
 
   /* ================= TARGET & SERANG ================= */
   findTarget(reach) {
-    const e = this.cam.position, d = this.fwd();
+    const e = this.eye, d = this.fwd();
     let best = null, bt = 1e9;
     const test = (cx, cy, cz, rad) => {
       const vx = cx - e.x, vy = cy - e.y, vz = cz - e.z;
@@ -541,7 +541,7 @@ export const actionsMixin = {
   /* gali tanah dengan sekop */
   dig() {
     if (this.inCave) return;
-    const e = this.cam.position, d = this.fwd();
+    const e = this.eye, d = this.fwd();
     for (let s = 0.4; s <= 3.6; s += 0.2) {
       const x = e.x + d.x * s, y = e.y + d.y * s, z = e.z + d.z * s;
       const h = this.hf.sample(x, z);
@@ -575,7 +575,7 @@ export const actionsMixin = {
   },
 
   aimDoor() {
-    this.ray.set(this.cam.position, this.fwd());
+    this.ray.set(this.eye, this.fwd());
     this.ray.far = 3.6;
     const hs = this.ray.intersectObjects(this.pieceRoots(), true).filter((h) => !h.object.userData.nopick && h.object.userData.piece);
     if (hs.length && hs[0].object.userData.piece.k === 'pintu') return hs[0].object.userData.piece;
@@ -592,7 +592,7 @@ export const actionsMixin = {
 
   fishCast() {
     if (this.inCave) return;
-    const e = this.cam.position, d = this.fwd();
+    const e = this.eye, d = this.fwd();
     if (d.y > -0.03) { this.toast('Arahkan ke air (lihat agak ke bawah)'); return; }
     const t = -e.y / d.y;
     if (t < 2.5) { this.toast('Terlalu dekat, lempar lebih jauh'); return; }
@@ -665,7 +665,7 @@ export const actionsMixin = {
     this.bobber.position.set(f.x, by, f.z);
     const v = this._fv || (this._fv = new THREE.Vector3());
     if (this.rodTip) this.rodTip.getWorldPosition(v);
-    else v.copy(this.cam.position);
+    else v.copy(this.eye);
     const a = this.fishLine.geometry.attributes.position;
     a.setXYZ(0, v.x, v.y, v.z);
     a.setXYZ(1, f.x, by, f.z);
@@ -674,7 +674,7 @@ export const actionsMixin = {
 
   /* ================= EMBER ================= */
   waterAhead(maxD) {
-    const e = this.cam.position, d = this.fwd();
+    const e = this.eye, d = this.fwd();
     if (this.inWater) return true;
     if (d.y < -0.02) {
       const t = -e.y / d.y;

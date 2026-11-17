@@ -47,7 +47,7 @@
     <div id="sLobby" class="screen">
       <div class="topLeft"><div class="chip" id="lbName">Santay</div></div>
       <div class="topRight"><button id="lbSet" class="iconBtn" data-ic="gear"></button></div>
-      <div class="leftMid"><button id="lbVault" class="btn side" data-ic="chest">Vault</button><button id="lbGuide" class="btn side" data-ic="book">Panduan</button></div>
+      <div class="leftMid"><button id="lbVault" class="btn side" data-ic="chest">Vault</button><button id="lbEdit" class="btn side" data-ic="person">Editor</button><button id="lbGuide" class="btn side" data-ic="book">Panduan</button></div>
       <div class="charTag" id="lbChar">Santay</div>
       <div class="bottomRight">
         <div class="startLabel">MULAI</div>
@@ -134,6 +134,7 @@
       <button id="roomLeave" class="btn back" data-ic="back">Keluar</button>
       <div class="roomTitle" id="roomTitle">Room</div>
       <div id="slots" class="slots"></div>
+      <div id="roomCount" class="roomCount"></div>
       <div class="charTag" id="roomMe">Santay</div>
       <div class="bottomRight">
         <button id="roomGo" class="btn start hidden">GAS!</button>
@@ -141,11 +142,26 @@
       </div>
     </div>
 
+    <div id="sChar" class="screen">
+      <div class="chEdPanel">
+        <div class="chEdTabs" id="chEdTabs"></div>
+        <div class="chEdBody" id="chEdBody"></div>
+        <div class="chEdFoot">
+          <button id="chEdRand" class="btn small dim">Acak</button>
+          <button id="chEdReset" class="btn small dim">Reset</button>
+          <button id="chEdCancel" class="btn small dim">Batal</button>
+          <button id="chEdSave" class="btn small">Simpan</button>
+        </div>
+      </div>
+      <div id="chEdView" class="chEdView"><span>Geser untuk memutar</span></div>
+    </div>
+
     <!-- MODAL -->
     <div id="mVault" class="modal">
       <div class="card">
         <h3 data-ic="chest">Vault Karakter</h3>
         <div id="vaultGrid" class="vaultGrid"></div>
+        <button id="vaultEdit" class="btn dim">Edit Detail Karakter</button>
         <button id="vaultClose" class="btn">Pilih</button>
       </div>
     </div>
@@ -177,6 +193,12 @@
         <div class="row"><label>Sensitivitas</label>
           <input id="sensRange" type="range" min="0.4" max="2.2" step="0.1" value="1" />
         </div>
+        <div class="row"><label>Jarak Pandang</label>
+          <div class="seg"><button id="viewNear">Dekat</button><button id="viewMid">Sedang</button><button id="viewFar">Jauh</button><button id="viewMax">Sangat</button></div>
+        </div>
+        <div class="row"><label>Kamera</label>
+          <div class="seg"><button id="camFp">Kepala</button><button id="camTp">Belakang</button></div>
+        </div>
         <button id="setClose" class="btn">Tutup</button>
       </div>
     </div>
@@ -194,6 +216,7 @@
       <button id="btnPause" class="iconBtn topBtn pause pe" data-ic="pause"></button>
       <button id="btnMic" class="rbtn mic onlineOnly pe" data-ic="mic"></button>
       <button id="btnChat" class="rbtn chat onlineOnly pe" data-ic="chat"></button>
+      <button id="btnEmote" class="rbtn emote pe" data-ic="emote"></button>
       <div id="quest" class="quest"><span id="questTxt"></span><div id="questHint" class="questHint"><img id="hintArrow" class="ic" alt=""><span id="hintTxt"></span></div></div>
       <div class="crosshair"></div>
       <div id="target" class="target"><div id="targetName"></div><div class="tbar"><i id="targetFill"></i></div></div>
@@ -226,6 +249,11 @@
       <div id="sleepMsg" class="sleepMsg"><div id="sleepMsgTxt">Tidur...</div></div>
       <div id="fade" class="fade"><span>Zzz...</span></div>
       <div id="panelDead" class="deadPanel"><div>Kamu pingsan...<small>Bangkit di titik spawn</small></div></div>
+
+      <div id="emoteWheel" class="emoteWheel pe">
+        <div id="emoteRing" class="emoteRing"></div>
+        <button id="emoteClose" class="btn small dim emClose" data-ic="close"></button>
+      </div>
 
       <div id="hudEdit" class="hudEdit pe">
         <div class="row2"><b>Atur HUD</b><span>Seret tombol untuk memindah · pilih lalu atur ukuran</span></div>

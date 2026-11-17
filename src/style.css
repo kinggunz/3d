@@ -336,3 +336,40 @@ input[type='range'] { padding: 0; width: 180px; accent-color: var(--acc); }
 .rbtn.act .ic { width: 70%; height: 70%; }
 .rbtn.ctx .ic { width: 28px; height: 28px; }
 .iconBtn, .topBtn, .rbtn { display: flex; align-items: center; justify-content: center; }
+
+/* ===== emote ===== */
+.rbtn.emote { right: calc(120px * var(--hs) + var(--sar)); top: calc(66px * var(--hs) + var(--sat)); width: calc(46px * var(--hs)); height: calc(46px * var(--hs)); }
+.emoteWheel { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(5, 8, 20, 0.55); z-index: 8; pointer-events: auto !important; }
+.emoteWheel.show { display: flex; }
+.emoteRing { position: relative; border-radius: 50%; background: radial-gradient(circle, rgba(27, 42, 74, 0.92) 0 30%, rgba(16, 26, 51, 0.88) 31% 100%); border: 3px solid rgba(255, 255, 255, 0.3); }
+.emSlot { position: absolute; transform: translate(-50%, -50%); width: 17%; aspect-ratio: 1; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.12); color: #fff; font-weight: 700; font-size: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 0; cursor: pointer; touch-action: manipulation; }
+.emSlot:active { background: rgba(240, 160, 48, 0.6); }
+.emSlot .ic { width: 52%; height: 52%; }
+.emCenter { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 24%; aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--acc); background: rgba(240, 160, 48, 0.25); color: #fff; font-weight: 800; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; }
+.emCenter .ic { width: 34%; height: 34%; }
+.emClose { position: absolute; right: calc(14px + var(--sar)); top: calc(12px + var(--sat)); }
+
+/* ===== room: karakter di tengah ===== */
+#slots { display: none; }
+.roomCount { position: absolute; left: 50%; top: calc(54px + var(--sat)); transform: translateX(-50%); padding: 4px 14px; border-radius: 14px; background: var(--dark); font-weight: 700; font-size: 13px; }
+
+/* ===== editor karakter ===== */
+#sChar { pointer-events: none; }
+#sChar > * { pointer-events: auto; }
+.chEdPanel { position: absolute; right: 0; top: 0; bottom: 0; width: min(52vw, 440px); background: linear-gradient(#1b2a4a, #101a33); border-left: 2px solid rgba(255, 255, 255, 0.25); display: flex; flex-direction: column; padding: calc(8px + var(--sat)) calc(10px + var(--sar)) calc(8px + var(--sab)) 10px; gap: 8px; }
+.chEdTabs { display: flex; gap: 5px; overflow-x: auto; flex: none; touch-action: pan-x; }
+.chEdTabs button { flex: none; padding: 7px 11px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; }
+.chEdTabs button.on { background: linear-gradient(#ffc45a, var(--acc2)); color: #2a1500; }
+.chEdBody { flex: 1; overflow-y: auto; touch-action: pan-y; display: flex; flex-direction: column; gap: 10px; }
+.chEdBody h5 { margin: 0 0 4px; font-size: 13px; opacity: 0.85; }
+.chEdBody .opts { display: flex; flex-wrap: wrap; gap: 5px; }
+.chEdBody .opts button { padding: 7px 11px; border: 2px solid transparent; border-radius: 10px; background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; }
+.chEdBody .opts button.on { border-color: var(--acc); background: rgba(240, 160, 48, 0.25); }
+.chEdBody .sw { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chEdBody .sw button { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); padding: 0; cursor: pointer; }
+.chEdBody .sw button.on { border-color: #fff; box-shadow: 0 0 0 2px var(--acc); }
+.chEdBody .sw button.none { background: repeating-linear-gradient(45deg, #444 0 4px, #222 4px 8px); }
+.chEdBody .sw input[type=color] { width: 36px; height: 30px; padding: 0; border: 0; background: none; }
+.chEdBody input[type=range] { width: 100%; }
+.chEdFoot { flex: none; display: flex; justify-content: flex-end; flex-wrap: wrap; }
+.chEdView { position: absolute; left: 0; top: 0; bottom: 0; width: calc(100% - min(52vw, 440px)); touch-action: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px; font-size: 12px; opacity: 0.8; }
