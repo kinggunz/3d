@@ -515,6 +515,11 @@ export function makeNature(hf, seed, scene) {
       for (const m of meshes) m.visible = on && !((m === flowers || m === stems) && lowOn);
       if (grassMesh && !on) grassMesh.visible = false;
     },
+    /* map War: hapus semua bunga hias */
+    clearFlowers() {
+      flowers.count = 0;
+      stems.count = 0;
+    },
     kill(n) {
       n.alive = false;
       setVisible(n, false);

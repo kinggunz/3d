@@ -89,7 +89,7 @@ const TABS = {
 <ol>
 <li>Gali Tanah dengan Sekop (3 Tanah) dan kumpulkan 8 Batu.</li>
 <li>Bangun <b>Tungku</b> (menu Bangun).</li>
-<li>Berdiri dekat Tungku, tekan tombol <b>Lebur</b>. Bijih + Batu Bara menjadi Besi.</li>
+<li>Berdiri dekat Tungku, tekan tombol <b>Lebur</b> (tombolnya selalu muncul di dekat Tungku). Bijih Besi (oranye, dari goa) + Batu Bara atau 2 Kayu menjadi Besi. Tanpa bijih, tombol berubah jadi <b>Masak</b> untuk daging/ikan mentah.</li>
 </ol>
 <div class="gTip">Besi dipakai untuk Panci, Kapak Besi, Beliung Besi, Pedang Besi, Lampu, Kompor, Mesin dan Setir kapal.</div>`;
   },

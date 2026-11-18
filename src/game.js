@@ -244,7 +244,7 @@ export class Game {
     this.sky.fogNear = q.fogN * vm;
     this.sky.fogFar = q.fogF * vm;
     this.nature.setLow(q.low);
-    this.nature.setGrass(q.grass && !this.inCave);
+    this.nature.setGrass(q.grass && !this.inCave && !this.war);
     this.animals.setCull(q.cull * vm);
     this.animals.setBirds(q.birds && !this.inCave);
     this.scene.traverse((o) => {
@@ -1325,17 +1325,24 @@ export class Game {
       this.updateCart(dt);
       this.survival(dt);
       this.world().tick(dt);
-      if (!this.inCave) this.animals.update(dt, p.x, p.z, p.y, this.t < 0.23 || this.t > 0.77, (n) => this.hurt(n));
+      if (!this.inCave && !this.war) this.animals.update(dt, p.x, p.z, p.y, this.t < 0.23 || this.t > 0.77, (n) => this.hurt(n));
       if (this.drinkCd > 0) this.drinkCd -= dt;
       if (this.actCd > 0) this.actCd -= dt;
       if (this.act && this.actCd <= 0 && !this.build && !this.busy) this.attack();
       this.updateFish(dt);
       this.updateSleep(dt);
       this.checkCave();
+      if (this.war) this.warUpdate(dt);
     }
     this.updateAnim(dt);
     this.sky.update(this.t, this.cam.position, this.cam.position, dt);
     this.water.update(dt, performance.now() / 1000);
+    if (this.war) {
+      /* istana: selalu terang, siang maupun malam */
+      const sk = this.sky;
+      sk.hemi.intensity = Math.max(sk.hemi.intensity, 0.85);
+      sk.sun.intensity *= 0.8;
+    }
     if (this.inCave) {
       /* di dalam goa: gelap, tanpa matahari/langit */
       const sk = this.sky;
@@ -1409,6 +1416,7 @@ export class Game {
   collectLights() {
     const out = [];
     if (this.inCave) for (const l of this.mine.lights) out.push(l);
+    else if (this.war && this.warLights) for (const l of this.warLights) out.push(l);
     else {
       for (const p of this.pieces) {
         const L = PIECE_LIGHT[p.k];

@@ -119,8 +119,16 @@ export class Animals {
 
   setCull(r) { this.cull = r; }
 
+  /* map War: tidak ada hewan sama sekali */
+  disable() {
+    this.off = true;
+    for (const a of this.list) { a.dead = true; a.rt = 1e12; this.scene.remove(a.g); }
+    for (const b of this.birds) b.g.visible = false;
+    this.birdsOn = false;
+  }
+
   setBirds(on) {
-    this.birdsOn = on;
+    this.birdsOn = on && !this.off;
     for (const b of this.birds) b.g.visible = on;
   }
 
@@ -172,7 +180,7 @@ export class Animals {
 
   update(dt, px, pz, py, night, hurt) {
     this.time += dt;
-    if (this.hidden) return;
+    if (this.hidden || this.off) return;
     const sample = this.hf.sample;
     for (const a of this.list) {
       if (a.dead) {

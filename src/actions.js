@@ -744,7 +744,7 @@ export const actionsMixin = {
     else if (this.war && this.nearNpc()) c = { id: 'shop', ic: 'chest', t: 'Toko' };
     else if (this.nearBed()) c = { id: 'sleep', ic: 'wake', t: 'Tidur' };
     else if (this.nearHelm()) c = { id: 'drive', ic: 'wheel', t: 'Kemudi' };
-    else if (this.nearFurnace() && inv.bijih > 0) c = { id: 'smelt', ic: 'fire', t: 'Lebur' };
+    else if (this.nearFurnace()) c = { id: 'smelt', ic: 'fire', t: inv.bijih > 0 ? 'Lebur' : raw > 0 ? 'Masak' : 'Tungku' };
     else if (this.nearStove()) c = { id: 'stove', ic: 'sup', t: 'Masak Sup' };
     else if (this.nearFire()) c = { id: 'cook', ic: 'fire', t: 'Masak' };
     else if (this.cart && this.hitch) c = { id: 'unhitch', ic: 'cart', t: 'Lepas' };
@@ -817,6 +817,19 @@ export const actionsMixin = {
 
   smelt() {
     const p = this.p;
+    if (!(p.inv.bijih > 0)) {
+      /* tanpa bijih: tungku tetap bisa dipakai memasak daging/ikan mentah */
+      const a = p.inv.daging, b = p.inv.ikan;
+      if (a + b > 0) {
+        p.inv.matang += a; p.inv.ikanmatang += b; p.inv.daging = 0; p.inv.ikan = 0;
+        this.toast(`Dimasak di tungku: ${a + b} makanan`);
+        Audio.sfx('cook');
+        this.stats.cook++;
+        this.updateQuest();
+        this.renderBag();
+      } else this.toast('Tungku butuh Bijih Besi (oranye, dari dalam goa) + Batu Bara / 2 Kayu. Daging/ikan mentah juga bisa dimasak di sini.');
+      return;
+    }
     const n = Math.min(p.inv.bijih, p.inv.batubara + Math.floor(p.inv.kayu / 2));
     if (n <= 0) { this.toast('Butuh Batu Bara  (atau 2 Kayu per bijih)'); return; }
     const coal = Math.min(n, p.inv.batubara);
