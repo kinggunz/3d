@@ -9,7 +9,7 @@ export const N = SEG + 1;
 export const STEP = SIZE / SEG;
 
 /* ---------- Tinggi daratan ---------- */
-export function genHeights(seed) {
+export function genHeights(seed, war) {
   const n = makeNoise(seed);
   const n2 = makeNoise(seed + 77);
   const H = new Float32Array(N * N);
@@ -22,7 +22,7 @@ export function genHeights(seed) {
     const m = n2(x * 0.02, z * 0.02, 3);
     if (m > 0.62) h += (m - 0.62) * 60 * mask;
     const r = Math.hypot(x, z);
-    const w = 1 - smooth(8, 26, r);
+    const w = war ? 1 - smooth(78, 112, r) : 1 - smooth(8, 26, r);
     h = h * (1 - w) + 3.2 * w;
     return h;
   };

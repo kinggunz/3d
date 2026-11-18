@@ -19,7 +19,7 @@ export const LOOK_DEFAULT = {
   hat: null, hatStyle: 0,
   glasses: 0, glassCol: '#222222',
   scarf: null, pack: null, cape: null,
-  h: 1, w: 1, head: 1,
+  h: 1, w: 1, head: 1, sk: null,
 };
 
 export const OPTS = {
@@ -53,6 +53,7 @@ export function normLook(d) {
   o.pantsStyle = num(o.pantsStyle | 0, 0, 1, 0);
   o.hatStyle = num(o.hatStyle | 0, 0, 5, 0);
   o.glasses = num(o.glasses | 0, 0, 2, 0);
+  o.sk = typeof o.sk === 'string' && o.sk.startsWith('data:image/png;base64,') && o.sk.length < 16000 ? o.sk : null;
   o.h = num(+o.h, 0.8, 1.2, 1);
   o.w = num(+o.w, 0.8, 1.25, 1);
   o.head = num(+o.head, 0.85, 1.3, 1);
@@ -221,7 +222,53 @@ export function buildChar(src) {
     return l;
   };
   g.userData = { rig, up, head, cape, armL: mkArm(-1), armR: mkArm(1), legL: mkLeg(-1), legR: mkLeg(1), top: 2.45 * d.h };
+  if (d.sk) applySkin(g, d.sk);
   return g;
+}
+
+
+/* ===== skin PNG (format skin Minecraft 64x64 / 64x32) ===== */
+const skinMats = new Map();
+function skinMat(url) {
+  if (!skinMats.has(url)) {
+    const t = new THREE.TextureLoader().load(url);
+    t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
+    if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+    skinMats.set(url, new THREE.MeshStandardMaterial({ map: t, roughness: 0.9, transparent: true, alphaTest: 0.5 }));
+  }
+  return skinMats.get(url);
+}
+function pngHeight(url) {
+  try { const b = atob(url.slice(url.indexOf(',') + 1, url.indexOf(',') + 41)); return (b.charCodeAt(20) << 24) | (b.charCodeAt(21) << 16) | (b.charCodeAt(22) << 8) | b.charCodeAt(23); } catch (e) { return 64; }
+}
+function mcBox(W, H, D, u, v, TH, mat, k) {
+  const g = new THREE.BoxGeometry(W * k, H * k, D * k);
+  /* urutan sisi three: +x(kiri MC), -x(kanan MC), atas, bawah, depan(+z), belakang */
+  const R = [[u + D + W, v + D, D, H], [u, v + D, D, H], [u + D, v, W, D], [u + D + W, v, W, D], [u + D, v + D, W, H], [u + 2 * D + W, v + D, W, H]];
+  const uv = g.attributes.uv;
+  for (let f = 0; f < 6; f++) {
+    const [rx, ry, rw, rh] = R[f];
+    for (let i = 0; i < 4; i++) {
+      const n = f * 4 + i;
+      uv.setXY(n, (rx + rw * uv.getX(n)) / 64, 1 - (ry + rh * (1 - uv.getY(n))) / TH);
+    }
+  }
+  return new THREE.Mesh(g, mat);
+}
+function applySkin(g, url) {
+  const TH = pngHeight(url) >= 64 ? 64 : 32;
+  const mat = skinMat(url);
+  const ud = g.userData;
+  const keep = new Set();
+  if (ud.cape) ud.cape.traverse((o) => keep.add(o));
+  g.traverse((o) => { if (o.isMesh && !keep.has(o)) o.visible = false; });
+  const k = 0.058;
+  const head = mcBox(8, 8, 8, 0, 0, TH, mat, k); head.position.set(0, 0.23, 0); ud.head.add(head);
+  const body = mcBox(8, 12, 4, 16, 16, TH, mat, k); body.position.set(0, 0.35, 0); ud.up.add(body);
+  const arm = (grp, u, v) => { const m = mcBox(4, 12, 4, u, v, TH, mat, k); m.position.set(0, -0.35, 0); grp.add(m); };
+  arm(ud.armL, 40, 16); arm(ud.armR, TH === 64 ? 32 : 40, TH === 64 ? 48 : 16);
+  const leg = (grp, u, v) => { const m = mcBox(4, 12, 4, u, v, TH, mat, k); m.position.set(0, -0.35, 0); grp.add(m); };
+  leg(ud.legL, 0, 16); leg(ud.legR, TH === 64 ? 16 : 0, TH === 64 ? 48 : 16);
 }
 
 /* ===== pose / emote ===== */

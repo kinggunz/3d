@@ -11,6 +11,7 @@ import { Vessel, vesselMixin } from './vessel.js';
 import { Mine, MINE_Y, findCaves, makeEntrance } from './mine.js';
 import { HudEditor } from './hudedit.js';
 import { actionsMixin } from './actions.js';
+import { warMixin, ARMOR } from './war.js';
 import { loadSave, writeSave } from './worlds.js';
 import { ico, costIcons, setIcon, setIconText, iconURL } from './icons.js';
 
@@ -106,6 +107,8 @@ export class Game {
     this.running = false;
     this.sprinting = false;
     this.seed = opts.seed || 1;
+    this.war = !!opts.war;
+    this.money = 0; this.armor = 0; this.npcs = [];
     this.stats = { chop: 0, mine: 0, built: 0, api: 0, hunt: 0, cook: 0, bed: 0, sleep: 0, ore: 0, smelt: 0, ember: 0, fish: 0, dock: 0, boat: 0, sail: 0, dig: 0 };
     this.quest = 0;
     this.chips = [];
@@ -143,7 +146,7 @@ export class Game {
     this.saved = saved;
     const ultra = this.set.gfx === 'ultra';
     const steps = [
-      ['Membentuk daratan...', () => { this.hf = genHeights(this.seed); }],
+      ['Membentuk daratan...', () => { this.hf = genHeights(this.seed, this.war); }],
       ['Menumbuhkan rumput...', () => { this.terrain = makeTerrain(this.hf, this.seed); this.scene.add(this.terrain); }],
       ['Mengisi lautan...', () => { this.water = makeWater(); this.scene.add(this.water); }],
       ['Menerbitkan matahari...', () => { this.sky = makeSky(this.scene); this.pieceGroup = new THREE.Group(); this.scene.add(this.pieceGroup); }],
@@ -152,6 +155,7 @@ export class Game {
       ['Menggali tambang...', () => { this.makeCaves(); }],
       ['Menyiapkan tangan...', () => { this.makeHands(); this.makeLights(); this.makeChips(); }],
       ['Memuat dunia...', () => { this.restore(); }],
+      ['Membangun istana...', () => { if (this.war) this.makeWar(); }],
       ['Menyusun grafik...', () => { this.applySettings(); this.r.compile(this.scene, this.cam); }],
     ];
     for (let i = 0; i < steps.length; i++) {
@@ -346,6 +350,7 @@ export class Game {
   }
 
   updateQuest(force) {
+    if (this.war) { const e = $('questTxt'); if (e) e.textContent = ' Istana = zona aman. Keluar gerbang untuk War. Jual hasil buruan ke penduduk desa!'; return; }
     const q = this.questList();
     let changed = false;
     while (this.quest < q.length && q[this.quest].ok()) {
@@ -731,6 +736,7 @@ export class Game {
   }
 
   toggleBuild() {
+    if (this.war) { this.toast('Map War: dilarang membangun / menghancurkan'); return; }
     if (this.paused || this.dead || this.sleeping || this.driving || this.hudEditing) return;
     this.build = !this.build;
     if (this.build) this.fishCancel();
@@ -1235,6 +1241,8 @@ export class Game {
   }
 
   die() {
+    if (this.war && this.net && this.lastHitBy && performance.now() - this.lastHitT < 10000) this.net.send({ t: 'kill', to: this.lastHitBy });
+    this.lastHitBy = null;
     this.dead = true;
     this.fishCancel();
     if (this.driving) this.stopDrive();
@@ -1525,6 +1533,10 @@ export class Game {
     } else if (m.t === 'k') {
       const n = this.nature.nodes[m.i];
       if (n && n.alive) this.nature.kill(n);
+    } else if (m.t === 'hit') {
+      if (this.war && this.net && m.to === this.net.myId) this.takeHit(m);
+    } else if (m.t === 'kill') {
+      if (this.war && this.net && m.to === this.net.myId) this.warKill(m);
     } else if (m.t === 'left') {
       this.dropRemote(id, true);
     } else if (m.t === 'chat') {
@@ -1648,6 +1660,10 @@ export class Game {
 
   dispose() {
     this.running = false;
+    for (const t of this.timers) { clearTimeout(t); clearInterval(t); }
+    for (const id of ['warHud', 'mShop']) { const e = document.getElementById(id); if (e) e.remove(); }
+    for (const t of this.timers) { clearTimeout(t); clearInterval(t); }
+    for (const id of ['warHud', 'mShop']) { const e = document.getElementById(id); if (e) e.remove(); }
     Audio.ambient(false);
     if (this.stateTimer) clearTimeout(this.stateTimer);
     if (this.voice) { this.voice.dispose(); this.voice = null; }
@@ -1673,4 +1689,4 @@ export class Game {
   }
 }
 
-Object.assign(Game.prototype, vesselMixin, actionsMixin, emoteMixin);
+Object.assign(Game.prototype, vesselMixin, actionsMixin, emoteMixin, warMixin);

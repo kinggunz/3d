@@ -2,7 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { Lobby } from './lobby.js';
 import { Game } from './game.js';
-import { Net, Browse, MAXP, OW_SEED, WORLD_MAX } from './net.js';
+import { Net, Browse, MAXP, OW_SEED, WORLD_MAX, WAR_SEED } from './net.js';
 import { listWorlds, createWorld, deleteWorld, MAX_WORLDS } from './worlds.js';
 import { Audio } from './audio.js';
 import { SKINS, drawPreview, lookFromSkin, normLook, packLook } from './chars.js';
@@ -621,6 +621,7 @@ async function openOnlineHub() {
   $('roomList').innerHTML = '';
   $('onStatus').textContent = 'Menghubungkan...';
   const b = new Browse(renderRoomList);
+  b.onWar = (n) => { $('warCount').textContent = n + ' pemain online'; };
   browse = b;
   try {
     await b.start();
@@ -766,6 +767,25 @@ async function goOpenWorld() {
   startGame({ online: true, seed: OW_SEED, open: true });
 }
 
+async function goWar() {
+  if (joining) return;
+  joining = true;
+  $('onStatus').textContent = 'Masuk PETUALANGAN WAR...';
+  const n = new Net();
+  try {
+    await n.joinWar(myInfo());
+  } catch (e) {
+    n.close();
+    $('onStatus').textContent = 'Online';
+    flash(e.message);
+    joining = false;
+    return;
+  }
+  joining = false;
+  net = n;
+  startGame({ online: true, seed: WAR_SEED, open: true, war: true });
+}
+$('onWar').onclick = goWar;
 $('crGo').onclick = createRoom;
 $('fnGo').onclick = joinPrivate;
 $('onOpen').onclick = goOpenWorld;
@@ -894,3 +914,27 @@ boot().catch((e) => {
   console.error(e);
   flash('Terjadi kesalahan: ' + (e && e.message ? e.message : e));
 });
+
+/* geser dengan mouse/trackpad untuk daftar mendatar & panduan (di HP sudah otomatis lewat sentuhan) */
+(() => {
+  const SEL = '.buildItems, .hotbar, .chEdTabs, .guideBody, .bagList, .roomList, .chEdBody';
+  let el = null, sx = 0, sy = 0, st = 0, sl = 0, moved = false;
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    el = e.target.closest && e.target.closest(SEL);
+    if (!el) return;
+    sx = e.clientX; sy = e.clientY; st = el.scrollTop; sl = el.scrollLeft; moved = false;
+  }, true);
+  window.addEventListener('pointermove', (e) => {
+    if (!el) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (Math.abs(dx) + Math.abs(dy) > 6) moved = true;
+    if (moved) { el.scrollLeft = sl - dx; el.scrollTop = st - dy; }
+  });
+  window.addEventListener('pointerup', () => { el = null; });
+  document.addEventListener('click', (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+  document.addEventListener('wheel', (e) => {
+    const t = e.target.closest && e.target.closest('.buildItems, .hotbar, .chEdTabs');
+    if (t && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { t.scrollLeft += e.deltaY; e.preventDefault(); }
+  }, { passive: false });
+})();

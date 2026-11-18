@@ -13,6 +13,8 @@ export const MAXP = 4;
 export const WORLD_MAX = 6;
 export const OW_MAX = 12;
 export const OW_SEED = 20260101;
+export const WAR_SEED = 77031987;
+export const WAR_MAX = 30;
 const STALE = 45000;
 const rid = () => Math.random().toString(36).slice(2, 8);
 const enc = (o) => JSON.stringify(o);
@@ -60,6 +62,8 @@ export class Browse {
     this.c = null;
     this.closed = false;
     this.timer = null;
+    this.war = new Map();
+    this.onWar = null;
   }
 
   async start() {
@@ -67,12 +71,18 @@ export class Browse {
     if (this.closed) { this.c.end(true); return; }
     this.c.on('message', (topic, buf) => {
       const id = topic.split('/').pop();
+      if (topic.indexOf('/r/war') > 0) {
+        if (buf.length) this.war.set(topic, 1); else this.war.delete(topic);
+        if (this.onWar) this.onWar(this.war.size);
+        return;
+      }
       const m = buf.length ? dec(buf) : null;
       if (!m) this.rooms.delete(id);
       else { m._seen = Date.now(); this.rooms.set(id, m); }
       this.emit();
     });
     this.c.subscribe(`${NS}/rooms/+`);
+    this.c.subscribe([1, 2, 3, 4].map((k) => `${NS}/r/war${k}/p/+`));
     this.timer = setInterval(() => this.emit(), 3000);
   }
 
@@ -275,6 +285,27 @@ export class Net {
     }
     this.close();
     throw new Error('Semua Open World penuh. Coba lagi nanti.');
+  }
+
+  /* PETUALANGAN WAR: shard war1.. (maks WAR_MAX pemain per shard) */
+  async joinWar(me) {
+    this.open = true;
+    this.isHost = false;
+    for (let k = 1; k <= 4; k++) {
+      if (this.c) { try { this.c.end(true); } catch (e) { /* abaikan */ } this.c = null; }
+      this.roster.clear();
+      await this._open('war' + k, me);
+      await this._subAll();
+      await new Promise((r) => setTimeout(r, 1200));
+      if (this.roster.size <= WAR_MAX) {
+        this.info = { seed: WAR_SEED, war: true };
+        this.started = true;
+        this._announce();
+        return k;
+      }
+    }
+    this.close();
+    throw new Error('Semua server PETUALANGAN WAR penuh. Coba lagi nanti.');
   }
 
   start(seed) {

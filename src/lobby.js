@@ -5,8 +5,16 @@ import { mulberry32 } from './util.js';
 export class Lobby {
   constructor() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x1a2447);
-    this.scene.fog = new THREE.Fog(0x2a2f55, 10, 45);
+    {
+      const cv = document.createElement('canvas');
+      cv.width = 8; cv.height = 256;
+      const g2 = cv.getContext('2d');
+      const gr = g2.createLinearGradient(0, 0, 0, 256);
+      gr.addColorStop(0, '#1b1f5c'); gr.addColorStop(0.45, '#7a3f9c'); gr.addColorStop(0.75, '#ff8a5c'); gr.addColorStop(1, '#ffd36b');
+      g2.fillStyle = gr; g2.fillRect(0, 0, 8, 256);
+      this.scene.background = new THREE.CanvasTexture(cv);
+    }
+    this.scene.fog = new THREE.Fog(0x7a4a7a, 12, 50);
     this.cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 120);
     this.cam.position.set(0, 1.35, 5.4);
     this.cam.lookAt(0, 1.05, 0);

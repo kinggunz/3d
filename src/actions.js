@@ -488,6 +488,7 @@ export const actionsMixin = {
     this.swing = 0.01;
     Audio.sfx('swing');
     const tool = TOOL[this.eq] || TOOL.tangan;
+    if (this.war && this.pvpHit(tool)) return;
     const tg = this.findTarget(3.6);
     if (!tg) { if (tool.dig) this.dig(); return; }
     if (tg.kind === 'node') {
@@ -740,11 +741,12 @@ export const actionsMixin = {
     if (this.sleeping) c = { id: 'wake', ic: 'wake', t: 'Bangun' };
     else if (this.driving) c = { id: 'undrive', ic: 'anchor', t: 'Turun' };
     else if (door) c = { id: 'door', ic: 'door', t: door.o ? 'Tutup' : 'Buka', door };
+    else if (this.war && this.nearNpc()) c = { id: 'shop', ic: 'chest', t: 'Toko' };
     else if (this.nearBed()) c = { id: 'sleep', ic: 'wake', t: 'Tidur' };
     else if (this.nearHelm()) c = { id: 'drive', ic: 'wheel', t: 'Kemudi' };
     else if (this.nearFurnace() && inv.bijih > 0) c = { id: 'smelt', ic: 'fire', t: 'Lebur' };
-    else if (this.nearStove() && raw > 0) c = { id: 'stove', ic: 'sup', t: 'Masak Sup' };
-    else if (this.nearFire() && raw > 0) c = { id: 'cook', ic: 'fire', t: 'Masak' };
+    else if (this.nearStove()) c = { id: 'stove', ic: 'sup', t: 'Masak Sup' };
+    else if (this.nearFire()) c = { id: 'cook', ic: 'fire', t: 'Masak' };
     else if (this.cart && this.hitch) c = { id: 'unhitch', ic: 'cart', t: 'Lepas' };
     else if (this.cart && !this.inCave && Math.hypot(this.cart.x - this.p.x, this.cart.z - this.p.z) < 3.4) c = { id: 'hitch', ic: 'cart', t: 'Dorong' };
     else if (this.canDrink()) c = { id: 'drink', ic: 'drop', t: 'Minum' };
@@ -758,6 +760,7 @@ export const actionsMixin = {
     const p = this.p;
     const id = this.ctx.id;
     if (id === 'wake') { this.wake(false); return; }
+    if (id === 'shop') { this.openShop(); return; }
     if (this.sleeping) return;
     if (id === 'undrive') { this.stopDrive(); return; }
     if (id === 'door') { this.toggleDoor(this.ctx.door); return; }
@@ -772,6 +775,7 @@ export const actionsMixin = {
       Audio.sfx('drink');
     } else if (id === 'cook') {
       const a = p.inv.daging, b = p.inv.ikan;
+      if (a + b <= 0) { this.toast('Belum ada daging/ikan mentah. Berburu atau memancing dulu!'); return; }
       p.inv.matang += a; p.inv.ikanmatang += b; p.inv.daging = 0; p.inv.ikan = 0;
       this.toast(`Dimasak: ${a + b} makanan`);
       Audio.sfx('cook');
@@ -789,6 +793,7 @@ export const actionsMixin = {
 
   cookStove() {
     const p = this.p;
+    if (p.inv.daging + p.inv.ikan <= 0) { this.toast('Belum ada daging/ikan mentah untuk dimasak'); return; }
     if (!(p.inv.panci > 0)) { this.toast('Butuh  Panci! (Tas, tab Alat, perlu Besi)'); return; }
     const raw = p.inv.daging + p.inv.ikan;
     const n = Math.min(raw, p.inv.kayu * 2);

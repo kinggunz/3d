@@ -8,8 +8,8 @@
   --sar: env(safe-area-inset-right, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
 }
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: none; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: #0a1230; color: var(--ink); font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: inherit; }
+html, body { touch-action: none; margin: 0; height: 100%; overflow: hidden; background: #0a1230; color: var(--ink); font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
 canvas#gl { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; }
 #app { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
 .hidden { display: none !important; }
@@ -139,9 +139,9 @@ input[type='range'] { padding: 0; width: 180px; accent-color: var(--acc); }
 .rbtn.eat { right: calc(104px + var(--sar)); bottom: calc(104px + var(--sab)); width: 54px; height: 54px; }
 .rbtn.ctx { right: calc(176px + var(--sar)); bottom: calc(74px + var(--sab)); width: auto; height: 50px; border-radius: 25px; padding: 0 18px; font-size: 16px; font-weight: 800; display: none; background: rgba(40, 140, 220, 0.8); }
 .rbtn.ctx.show { display: flex; }
-.buildBar { position: absolute; left: 50%; bottom: calc(10px + var(--sab)); transform: translateX(-50%); width: min(560px, calc(100vw - 420px)); display: none; align-items: center; gap: 8px; }
+.buildBar { position: absolute; left: 50%; bottom: calc(10px + var(--sab)); transform: translateX(-50%); width: max(280px, min(560px, calc(100vw - 420px))); max-width: calc(100vw - 16px); display: none; align-items: center; gap: 8px; }
 .buildBar.show { display: flex; }
-.buildItems { display: flex; gap: 6px; overflow-x: auto; flex: 1; padding: 4px; touch-action: pan-x; }
+.buildItems { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; scrollbar-width: none; flex: 1; padding: 4px; touch-action: pan-x; }
 .bItem { flex: 0 0 auto; width: 74px; padding: 5px 2px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.3); background: var(--dark); color: #fff; display: flex; flex-direction: column; align-items: center; font-size: 10px; cursor: pointer; touch-action: manipulation; }
 .bItem span { font-size: 22px; }
 .bItem i { font-style: normal; opacity: 0.85; }
@@ -373,3 +373,15 @@ input[type='range'] { padding: 0; width: 180px; accent-color: var(--acc); }
 .chEdBody input[type=range] { width: 100%; }
 .chEdFoot { flex: none; display: flex; justify-content: flex-end; flex-wrap: wrap; }
 .chEdView { position: absolute; left: 0; top: 0; bottom: 0; width: calc(100% - min(52vw, 440px)); touch-action: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px; font-size: 12px; opacity: 0.8; }
+
+/* geser selalu mulus: semua isi wadah scroll ikut mengizinkan geser */
+.buildItems *, .hotbar * { touch-action: pan-x; }
+.guideBody *, .bagList *, .roomList *, .chEdBody *, .card * { touch-action: pan-y; }
+.card button, .card input, .bItem, .hbItem { touch-action: manipulation; }
+.buildItems .bItem, .buildItems .bItem * { touch-action: pan-x; }
+.guideBody, .bagList, .roomList, .chEdBody, .card { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+/* PETUALANGAN WAR */
+.rainbow { background: linear-gradient(90deg, #ff4d4d, #ffb84d, #fff04d, #5dff6a, #4dc3ff, #b36bff, #ff6bd0); -webkit-background-clip: text; background-clip: text; color: transparent !important; -webkit-text-fill-color: transparent; font-weight: 900; letter-spacing: 1px; }
+.warRow { border-color: #ffb84d; box-shadow: 0 0 14px rgba(255, 140, 60, 0.5); }
+#warHud { position: absolute; left: 50%; top: calc(54px + var(--sat, 0px)); transform: translateX(-50%); padding: 4px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.55); font-size: 12px; font-weight: 700; white-space: nowrap; pointer-events: none; z-index: 3; }

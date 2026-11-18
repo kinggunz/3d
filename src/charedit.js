@@ -21,6 +21,7 @@ const TABS = [
   ['Baju', [['opt', 'shirtStyle', 'Model Baju'], ['col', 'shirt', 'Warna Utama', 'cloth'], ['col', 'shirt2', 'Warna Kedua', 'cloth']]],
   ['Celana', [['opt', 'pantsStyle', 'Celana'], ['col', 'pants', 'Warna Celana', 'pants'], ['col', 'shoes', 'Warna Sepatu', 'shoes']]],
   ['Topi', [['opt', 'hatStyle', 'Model Topi'], ['col', 'hat', 'Warna Topi', 'acc']]],
+  ['Skin PNG', [['skin', 'sk', 'Skin 3D Minecraft (PNG 64x64)']]],
   ['Aksesori', [['colN', 'scarf', 'Syal', 'acc'], ['colN', 'pack', 'Ransel', 'acc'], ['colN', 'cape', 'Jubah', 'acc']]],
 ];
 
@@ -96,6 +97,33 @@ export function openCharEditor({ lobby, look, onSave, onCancel }) {
         r.value = d[key];
         r.oninput = () => { d[key] = parseFloat(r.value); apply(); };
         box.appendChild(r);
+      } else if (kind === 'skin') {
+        const info = document.createElement('div');
+        info.style.cssText = 'font-size:12px;opacity:.85;margin-bottom:6px';
+        info.textContent = d.sk ? 'Skin aktif. Warna lain diabaikan.' : 'Pilih file PNG skin Minecraft dari galeri.';
+        const f = document.createElement('input');
+        f.type = 'file'; f.accept = 'image/png';
+        f.onchange = () => {
+          const file = f.files && f.files[0];
+          if (!file) return;
+          const img = new Image();
+          img.onload = () => {
+            const cv = document.createElement('canvas');
+            cv.width = 64; cv.height = img.height * 2 <= img.width ? 32 : 64;
+            const g2 = cv.getContext('2d');
+            g2.imageSmoothingEnabled = false;
+            g2.drawImage(img, 0, 0, 64, cv.height);
+            const url = cv.toDataURL('image/png');
+            if (url.length >= 16000) { info.textContent = 'File terlalu rumit, pakai skin 64x64 yang lebih sederhana.'; return; }
+            d.sk = url; apply(); render();
+          };
+          img.onerror = () => { info.textContent = 'Gagal membaca gambar PNG.'; };
+          img.src = URL.createObjectURL(file);
+        };
+        const rm = document.createElement('button');
+        rm.className = 'btn dim'; rm.textContent = 'Hapus Skin';
+        rm.onclick = () => { d.sk = null; apply(); render(); };
+        box.append(info, f, rm);
       }
       body.appendChild(box);
     }
