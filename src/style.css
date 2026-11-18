@@ -390,3 +390,14 @@ input[type='range'] { padding: 0; width: 180px; accent-color: var(--acc); }
 #warBanner .rainbow { display: block; font-size: min(9vw, 54px); text-shadow: none; filter: drop-shadow(0 3px 6px rgba(0,0,0,.7)); }
 #warBanner small { display: block; font-size: 18px; font-weight: 800; color: #fff; text-shadow: 0 2px 6px #000; }
 @keyframes warIn { 0% { opacity: 0; transform: scale(.8); } 12% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ===== tombol lobby lebih bagus ===== */
+#sLobby .leftMid { gap: 12px; }
+#sLobby .btn.side { display: flex; align-items: center; gap: 10px; min-width: 156px; padding: 12px 20px; border-radius: 20px; font-weight: 800; font-size: 16px; color: #fff; background: linear-gradient(135deg, rgba(255,255,255,.24), rgba(255,255,255,.05)), rgba(18,26,58,.62); border: 1.5px solid rgba(255,255,255,.38); box-shadow: 0 6px 16px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.4); backdrop-filter: blur(6px); transition: transform .12s; }
+#sLobby .btn.side:active, #sLobby .modeBtn:active { transform: scale(.95); }
+#sLobby .startLabel { text-align: center; font-weight: 900; letter-spacing: 4px; font-size: 13px; opacity: .9; text-shadow: 0 2px 6px #000; }
+#sLobby .modeBtn { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 24px; border-radius: 24px; font-size: 20px; font-weight: 900; letter-spacing: .5px; color: #fff; border: 2px solid rgba(255,255,255,.6); text-shadow: 0 2px 4px rgba(0,0,0,.45); box-shadow: 0 8px 20px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.45); }
+#sLobby .modeBtn.on { background: linear-gradient(135deg, #ffc15a, #ff5e3a); }
+#sLobby .modeBtn.off { background: linear-gradient(135deg, #5bbcff, #2b5fd9); }
+#sLobby .charTag { background: linear-gradient(135deg, rgba(255,255,255,.2), rgba(255,255,255,.04)), rgba(18,26,58,.7); border: 1.5px solid rgba(255,255,255,.35); box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+.bigRow, .roomRow { background: linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.03)), rgba(18,30,50,.6); box-shadow: 0 4px 12px rgba(0,0,0,.3); }

@@ -351,7 +351,8 @@ export class Game {
   }
 
   updateQuest(force) {
-    if (this.war) { const e = $('questTxt'); if (e) e.textContent = ' Istana = zona aman. Keluar gerbang untuk War. Jual hasil buruan ke penduduk desa!'; return; }
+    { const e = $('questTxt'); const bx = e && e.parentElement; if (bx) bx.style.display = this.war ? 'none' : ''; }
+    if (this.war) return;
     const q = this.questList();
     let changed = false;
     while (this.quest < q.length && q[this.quest].ok()) {
@@ -1255,7 +1256,7 @@ export class Game {
       if (this.inCave) this.setCave(false, -1);
       p.on = null;
       p.x = p.spawn.x; p.z = p.spawn.z;
-      p.y = this.groundAt(p.x, p.z, 200);
+      p.y = this.war ? 3.25 : this.groundAt(p.x, p.z, 200);
       p.vy = 0;
       p.hp = 70; p.hunger = 60; p.thirst = 60;
       this.dead = false;

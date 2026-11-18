@@ -269,6 +269,13 @@ function applySkin(g, url) {
   arm(ud.armL, 40, 16); arm(ud.armR, TH === 64 ? 32 : 40, TH === 64 ? 48 : 16);
   const leg = (grp, u, v) => { const m = mcBox(4, 12, 4, u, v, TH, mat, k); m.position.set(0, -0.35, 0); grp.add(m); };
   leg(ud.legL, 0, 16); leg(ud.legR, TH === 64 ? 16 : 0, TH === 64 ? 48 : 16);
+  if (TH === 64) {
+    const o = k * 1.13;
+    const ov = (grp, W, H, D, u, v, y) => { const m = mcBox(W, H, D, u, v, TH, mat, o); m.position.set(0, y, 0); grp.add(m); };
+    ov(ud.head, 8, 8, 8, 32, 0, 0.23); ov(ud.up, 8, 12, 4, 16, 32, 0.35);
+    ov(ud.armL, 4, 12, 4, 40, 32, -0.35); ov(ud.armR, 4, 12, 4, 48, 48, -0.35);
+    ov(ud.legL, 4, 12, 4, 0, 32, -0.35); ov(ud.legR, 4, 12, 4, 0, 48, -0.35);
+  }
 }
 
 /* ===== pose / emote ===== */

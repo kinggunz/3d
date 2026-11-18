@@ -22,7 +22,7 @@ export function genHeights(seed, war) {
     const m = n2(x * 0.02, z * 0.02, 3);
     if (m > 0.62) h += (m - 0.62) * 60 * mask;
     const r = Math.hypot(x, z);
-    const w = war ? 1 - smooth(78, 112, r) : 1 - smooth(8, 26, r);
+    const w = war ? 1 - smooth(98, 135, r) : 1 - smooth(8, 26, r);
     h = h * (1 - w) + 3.2 * w;
     return h;
   };
