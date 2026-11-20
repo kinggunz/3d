@@ -15,6 +15,8 @@ export const OW_MAX = 12;
 export const OW_SEED = 20260101;
 export const WAR_SEED = 77031987;
 export const WAR_MAX = 30;
+export const DRIG_SEED = 52026111;
+export const DRIG_MAX = 24;
 const STALE = 45000;
 const rid = () => Math.random().toString(36).slice(2, 8);
 const enc = (o) => JSON.stringify(o);
@@ -306,6 +308,27 @@ export class Net {
     }
     this.close();
     throw new Error('Semua server PETUALANGAN WAR penuh. Coba lagi nanti.');
+  }
+
+  /* DRIG BIGE 3D SANTAY: shard drig1.. (maks DRIG_MAX pemain per shard) */
+  async joinDrig(me) {
+    this.open = true;
+    this.isHost = false;
+    for (let k = 1; k <= 4; k++) {
+      if (this.c) { try { this.c.end(true); } catch (e) { /* abaikan */ } this.c = null; }
+      this.roster.clear();
+      await this._open('drig' + k, me);
+      await this._subAll();
+      await new Promise((r) => setTimeout(r, 1200));
+      if (this.roster.size <= DRIG_MAX) {
+        this.info = { seed: DRIG_SEED, moto: true };
+        this.started = true;
+        this._announce();
+        return k;
+      }
+    }
+    this.close();
+    throw new Error('Semua server DRIG BIGE penuh. Coba lagi nanti.');
   }
 
   start(seed) {

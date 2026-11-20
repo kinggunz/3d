@@ -560,6 +560,7 @@ export const warMixin = {
       phase++;
       for (const t of this.warTiles) t.m.material = this.warDisco[(t.i + phase) % 6];
     }, 450));
+    this.makeBots();
     this.timers.push(setTimeout(() => this.toast('Selamat datang di Istana! Pintu depan tertutup. Masuk ARENA (selatan aula) = langsung dapat pedang. Naik tangga untuk mini-game & koin.'), 1500));
   },
 
@@ -582,6 +583,7 @@ export const warMixin = {
   /* dipanggil tiap frame di map War */
   warUpdate(dt) {
     const p = this.p;
+    this.botUpdate(dt);
     const now = (this.warClock = (this.warClock || 0) + dt);
     if (p.y < Y - 4) { p.x = p.spawn.x; p.z = p.spawn.z; p.y = Y + 0.02; p.vy = 0; }
     /* nama lantai saat naik/turun */
@@ -654,7 +656,7 @@ export const warMixin = {
     if (!h) return;
     const safe = this.inSafe(this.p.x, this.p.z, this.p.y);
     const lt = this.warFloor >= 10 ? 'Atap' : 'Lt.' + ((this.warFloor || 0) + 1);
-    h.innerHTML = `<b class="rainbow">PETUALANGAN WAR</b> · 👥 ${this.remotes.size + 1} · 💰 ${this.money} · 🛡 ${ARMOR[this.armor].n} · ${lt} · <span style="color:${safe ? '#7dff9a' : '#ff6b6b'}">${safe ? 'ZONA AMAN' : 'ARENA PVP'}</span>`;
+    h.innerHTML = `<b class="rainbow">PETUALANGAN WAR</b> · 👥 ${this.remotes.size + 1 + (this.bots ? this.bots.length : 0)} · 💰 ${this.money} · 🛡 ${ARMOR[this.armor].n} · ${lt} · <span style="color:${safe ? '#7dff9a' : '#ff6b6b'}">${safe ? 'ZONA AMAN' : 'ARENA PVP'}</span>`;
     const m = $('mShop');
     if (m && m.classList.contains('show') && !this.nearNpc()) m.classList.remove('show');
   },
@@ -719,16 +721,22 @@ export const warMixin = {
   },
 
   pvpHit(tool) {
-    if (!this.net || this.inSafe(this.p.x, this.p.z, this.p.y)) return false;
+    if (this.inSafe(this.p.x, this.p.z, this.p.y)) return false;
     const f = this.fwd(), e = this.eye;
     let best = null, bd = 3.4;
-    for (const [id, r] of this.remotes) {
+    for (const [id, r] of (this.net ? this.remotes : [])) {
       const c = r.g.position;
       if (this.inSafe(c.x, c.z, c.y)) continue;
       const dx = c.x - e.x, dy = c.y + 1.1 - e.y, dz = c.z - e.z;
       const d = Math.hypot(dx, dy, dz);
       if (d > bd || (dx * f.x + dy * f.y + dz * f.z) / d < 0.8) continue;
       best = id; bd = d;
+    }
+    const bot = this.botAim(tool);
+    if (bot && (!best || Math.hypot(bot.x - e.x, 4.3 - e.y, bot.z - e.z) < bd)) {
+      this.botHurt(bot, 8 + (tool.animal || 1) * 3, true);
+      Audio.sfx('hit');
+      return true;
     }
     if (!best) return false;
     const c = this.remotes.get(best).g.position;

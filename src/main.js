@@ -2,7 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { Lobby } from './lobby.js';
 import { Game } from './game.js';
-import { Net, Browse, MAXP, OW_SEED, WORLD_MAX, WAR_SEED } from './net.js';
+import { Net, Browse, MAXP, OW_SEED, WORLD_MAX, WAR_SEED, DRIG_SEED } from './net.js';
 import { listWorlds, createWorld, deleteWorld, MAX_WORLDS } from './worlds.js';
 import { Audio } from './audio.js';
 import { SKINS, drawPreview, lookFromSkin, normLook, packLook } from './chars.js';
@@ -608,6 +608,11 @@ function renderRoomList(list) {
   wr.innerHTML = `<b><span class="rainbow">PETUALANGAN WAR</span><small>Map istana · PvP · Server resmi</small></b><em>${warN} online</em>`;
   wr.onclick = goWar;
   w.appendChild(wr);
+  const dr = document.createElement('div');
+  dr.className = 'roomRow warListRow';
+  dr.innerHTML = '<b>DRIG BIGE 3D SANTAY<small>Balap motor · kota besar · modif motor</small></b><em>Main</em>';
+  dr.onclick = () => goDrig(false);
+  w.appendChild(dr);
   if (!list.length) {
     const e = document.createElement('div');
     e.className = 'roomEmpty';
@@ -786,15 +791,39 @@ async function goWar() {
     await n.joinWar(myInfo());
   } catch (e) {
     n.close();
-    $('onStatus').textContent = 'Online';
-    flash(e.message);
     joining = false;
+    net = null;
+    flash('Server online tidak terjangkau, masuk War mode sendiri (bot tetap ada)');
+    startGame({ online: false, seed: WAR_SEED, open: true, war: true });
     return;
   }
   joining = false;
   net = n;
   startGame({ online: true, seed: WAR_SEED, open: true, war: true });
 }
+/* DRIG BIGE 3D SANTAY: coba online (Mabar); kalau gagal / diminta, main sendiri */
+async function goDrig(solo) {
+  if (joining) return;
+  if (solo) { startGame({ online: false, seed: DRIG_SEED, moto: true }); return; }
+  joining = true;
+  $('onStatus').textContent = 'Masuk DRIG BIGE...';
+  const n = new Net();
+  try {
+    await n.joinDrig(myInfo());
+  } catch (e) {
+    n.close();
+    $('onStatus').textContent = 'Online';
+    flash('Server online tidak terjangkau — main sendiri dulu');
+    joining = false;
+    startGame({ online: false, seed: DRIG_SEED, moto: true });
+    return;
+  }
+  joining = false;
+  net = n;
+  startGame({ online: true, seed: DRIG_SEED, open: true, moto: true });
+}
+$('onDrig').onclick = () => goDrig(false);
+$('onDrigSolo').onclick = () => goDrig(true);
 $('crGo').onclick = createRoom;
 $('fnGo').onclick = joinPrivate;
 $('onOpen').onclick = goOpenWorld;
@@ -823,6 +852,7 @@ async function startGame(o) {
     players: o.players,
     open: !!o.open,
     war: !!o.war,
+    moto: !!o.moto,
     name: account.name,
     skinId,
     look: curLook(),

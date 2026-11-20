@@ -401,3 +401,77 @@ input[type='range'] { padding: 0; width: 180px; accent-color: var(--acc); }
 #sLobby .modeBtn.off { background: linear-gradient(135deg, #5bbcff, #2b5fd9); }
 #sLobby .charTag { background: linear-gradient(135deg, rgba(255,255,255,.2), rgba(255,255,255,.04)), rgba(18,26,58,.7); border: 1.5px solid rgba(255,255,255,.35); box-shadow: 0 4px 12px rgba(0,0,0,.4); }
 .bigRow, .roomRow { background: linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.03)), rgba(18,30,50,.6); box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+
+/* ===== Tema biasa (bukan kartun): teks pelangi & tombol permen diganti warna netral ===== */
+.rainbow { background: none !important; -webkit-text-fill-color: #f4efe3 !important; color: #f4efe3 !important; font-weight: 800; letter-spacing: 2px; }
+#sLobby .modeBtn.on { background: linear-gradient(180deg, #4a5560, #2c343d); border-color: rgba(255,255,255,.45); }
+#sLobby .modeBtn.off { background: linear-gradient(180deg, #44505f, #29313c); border-color: rgba(255,255,255,.45); }
+#sLobby .btn.side { background: rgba(20,24,30,.66); border-radius: 12px; }
+#sLobby .modeBtn { border-radius: 14px; }
+
+/* ===== DRIG BIGE 3D SANTAY: HUD motor ===== */
+#hud.moto #stats, #hud.moto #quest, #hud.moto #joy, #hud.moto #btnAct, #hud.moto #btnJump, #hud.moto #btnCrouch,
+#hud.moto #btnBuild, #hud.moto #btnEat, #hud.moto #hotbar, #hud.moto #btnBag, #hud.moto #btnEmote, #hud.moto #questHint, #hud.moto #target { display: none !important; }
+#motoHud { position: absolute; inset: 0; pointer-events: none; z-index: 3; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+#motoHud button { pointer-events: auto; touch-action: none; font-family: inherit; color: #fff; cursor: pointer; }
+#mMap { position: absolute; left: calc(12px + var(--sal)); top: calc(56px + var(--sat)); width: 128px; height: 128px; border-radius: 50%; box-shadow: 0 4px 14px rgba(0,0,0,.5); }
+#mSpeed { position: absolute; left: 50%; bottom: calc(14px + var(--sab)); transform: translateX(-50%); min-width: 150px; text-align: center; background: rgba(14,16,20,.62); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 6px 14px 8px; backdrop-filter: blur(4px); }
+#mSpeed b { font-size: 38px; font-weight: 800; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+#mSpeed span { font-size: 12px; margin-left: 6px; opacity: .75; }
+#mSpeed .rpmBar { height: 5px; margin-top: 4px; border-radius: 3px; background: rgba(255,255,255,.14); overflow: hidden; }
+#mSpeed .rpmBar i { display: block; height: 100%; width: 0; background: #d9d9dc; }
+#mLap { position: absolute; left: 50%; top: calc(54px + var(--sat)); transform: translateX(-50%); max-width: 80vw; padding: 5px 14px; font-size: 13px; font-weight: 700; background: rgba(14,16,20,.62); border-radius: 10px; border: 1px solid rgba(255,255,255,.16); white-space: nowrap; }
+.mSide { position: absolute; right: calc(12px + var(--sar)); top: calc(60px + var(--sat)); display: flex; flex-direction: column; gap: 8px; }
+.mSm { padding: 9px 12px; font-size: 12px; font-weight: 700; letter-spacing: .5px; background: rgba(20,24,30,.7); border: 1px solid rgba(255,255,255,.28); border-radius: 10px; }
+.mSm:active, .mBtn.down, .mBig.down { filter: brightness(1.5); }
+.mPad { position: absolute; bottom: calc(22px + var(--sab)); display: flex; align-items: flex-end; gap: 12px; }
+.mPad.left { left: calc(22px + var(--sal)); }
+.mPad.right { right: calc(22px + var(--sar)); }
+.mBig { width: 86px; height: 86px; border-radius: 18px; font-size: 30px; background: rgba(22,26,32,.72); border: 1.5px solid rgba(255,255,255,.32); }
+.mBtn { width: 70px; height: 70px; border-radius: 50%; font-size: 13px; font-weight: 800; letter-spacing: 1px; background: rgba(22,26,32,.74); border: 1.5px solid rgba(255,255,255,.34); }
+.mBtn.gas { width: 104px; height: 104px; font-size: 17px; background: rgba(32,110,66,.82); }
+.mBtn.nos { background: rgba(30,90,170,.82); }
+.mBtn:first-child { background: rgba(150,40,36,.82); }
+
+/* ===== halaman MODIF ===== */
+#sModif { position: absolute; inset: 0; z-index: 40; display: flex; justify-content: flex-end; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #eceff3; touch-action: none; }
+.mdStage { position: absolute; left: 0; top: 0; bottom: 0; right: min(46vw, 460px); touch-action: none; cursor: grab; }
+.mdHint { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); font-size: 12px; opacity: .65; background: rgba(0,0,0,.35); padding: 4px 12px; border-radius: 10px; }
+.mdPanel { position: relative; width: min(46vw, 460px); min-width: 300px; height: 100%; display: flex; flex-direction: column; background: rgba(18,21,26,.94); border-left: 1px solid rgba(255,255,255,.14); padding: calc(10px + var(--sat)) 14px calc(10px + var(--sab)) 14px; backdrop-filter: blur(8px); }
+.mdHead { display: flex; align-items: baseline; justify-content: space-between; padding: 2px 2px 8px; }
+.mdHead b { font-size: 20px; letter-spacing: 2px; font-weight: 800; }
+.mdHead span { font-size: 12px; opacity: .6; }
+.mdTabs { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.12); }
+.mdTab { padding: 7px 11px; font-size: 12.5px; font-weight: 700; color: #cfd5dc; background: rgba(255,255,255,.07); border: 1px solid transparent; border-radius: 8px; cursor: pointer; }
+.mdTab.on { background: #d9a81c; color: #14161a; }
+.mdBody { flex: 1; overflow-y: auto; padding: 10px 2px; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+.mdRow { margin-bottom: 14px; }
+.mdLabel { font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; opacity: .7; margin-bottom: 6px; }
+.mdSw { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.mdDot { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); cursor: pointer; padding: 0; }
+.mdDot.on { border-color: #fff; box-shadow: 0 0 0 2px #d9a81c; }
+.mdColor { width: 40px; height: 32px; border: 0; background: none; padding: 0; cursor: pointer; }
+.mdOpts { display: flex; flex-wrap: wrap; gap: 7px; }
+.mdOpt { padding: 9px 12px; font-size: 13px; font-weight: 600; color: #e4e8ec; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 8px; cursor: pointer; text-align: left; }
+.mdOpt.on { background: #d9a81c; color: #14161a; border-color: #d9a81c; }
+.mdOpt.wide { display: block; width: 100%; margin-bottom: 7px; }
+.mdOpt small { display: block; font-weight: 500; opacity: .7; font-size: 11px; margin-top: 2px; }
+.mdRange { width: 100%; accent-color: #d9a81c; }
+.mdFile { width: 100%; font-size: 12px; color: #cfd5dc; margin-bottom: 8px; }
+.mdHint2 { font-size: 12px; opacity: .65; margin-bottom: 8px; }
+.mdFoot { display: flex; gap: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.12); }
+.mdBtn { padding: 11px 14px; font-size: 14px; font-weight: 800; color: #fff; background: #3a4552; border: 0; border-radius: 9px; cursor: pointer; }
+.mdBtn.ok { flex: 1; background: #1f8a50; }
+.mdBtn.dim { background: rgba(255,255,255,.1); }
+@media (max-width: 760px) {
+  .mdPanel { width: 56vw; min-width: 0; padding: 8px 10px; }
+  .mdStage { right: 56vw; }
+  .mdTab { padding: 6px 8px; font-size: 11.5px; }
+  .mBig { width: 70px; height: 70px; }
+  .mBtn.gas { width: 88px; height: 88px; }
+  .mBtn { width: 58px; height: 58px; }
+  #mMap { width: 100px; height: 100px; }
+}
+
+body.modifOn #motoHud{display:none!important}
+body.modifOn #toasts{display:none}

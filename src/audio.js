@@ -49,6 +49,13 @@ export const Audio = {
     }
   },
 
+  /* akses graf audio untuk suara mesin motor */
+  graph() {
+    Audio.init();
+    if (!A.ctx) return null;
+    return { ctx: A.ctx, dest: A.sfxG, noise: A.noiseBuf };
+  },
+
   /* harus dipanggil dari gestur pengguna */
   unlock() {
     Audio.init();

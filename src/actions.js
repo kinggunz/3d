@@ -561,6 +561,7 @@ export const actionsMixin = {
 
   /* ================= AKSI ================= */
   pressAct() {
+    if (this.moto) return;
     if (this.paused || this.dead || this.sleeping || this.busy || this.hudEditing || this.driving) return;
     if (this.build) { this.place(); return; }
     if (this.actTool()) return;
@@ -738,7 +739,8 @@ export const actionsMixin = {
     const raw = inv.daging + inv.ikan;
     let c = null;
     const door = !this.build && !this.sleeping && !this.driving && !this.busy ? this.aimDoor() : null;
-    if (this.sleeping) c = { id: 'wake', ic: 'wake', t: 'Bangun' };
+    if (this.moto) c = this.motoCtx();
+    else if (this.sleeping) c = { id: 'wake', ic: 'wake', t: 'Bangun' };
     else if (this.driving) c = { id: 'undrive', ic: 'anchor', t: 'Turun' };
     else if (door) c = { id: 'door', ic: 'door', t: door.o ? 'Tutup' : 'Buka', door };
     else if (this.war && this.nearNpc()) c = { id: 'shop', ic: 'chest', t: 'Toko' };
@@ -759,6 +761,7 @@ export const actionsMixin = {
     if (!this.ctx || this.dead || this.busy || this.hudEditing) return;
     const p = this.p;
     const id = this.ctx.id;
+    if (id === 'modif') { this.openModif(); return; }
     if (id === 'wake') { this.wake(false); return; }
     if (id === 'shop') { this.openShop(); return; }
     if (this.sleeping) return;
@@ -1067,6 +1070,7 @@ export const actionsMixin = {
     inp.value = '';
     this.addChat(this.o.name || 'Santay', text, true);
     if (this.net) this.net.send({ t: 'chat', n: String(this.o.name || 'Santay').slice(0, 14), m: text });
+    if (this.war && this.botReply) this.botReply(text);
   },
 
   addChat(name, text, self) {

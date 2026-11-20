@@ -12,7 +12,9 @@ import { Mine, MINE_Y, findCaves, makeEntrance } from './mine.js';
 import { HudEditor } from './hudedit.js';
 import { actionsMixin } from './actions.js';
 import { warMixin, ARMOR } from './war.js';
-import { WAR_SEED } from './net.js';
+import { WAR_SEED, DRIG_SEED } from './net.js';
+import { motoMixin, flatHF } from './moto.js';
+import { botMixin } from './bots.js';
 import { loadSave, writeSave } from './worlds.js';
 import { ico, costIcons, setIcon, setIconText, iconURL } from './icons.js';
 
@@ -109,6 +111,7 @@ export class Game {
     this.sprinting = false;
     this.seed = opts.seed || 1;
     this.war = !!opts.war || opts.seed === WAR_SEED;
+    this.moto = !!opts.moto || opts.seed === DRIG_SEED;
     this.money = 0; this.armor = 0; this.npcs = [];
     this.stats = { chop: 0, mine: 0, built: 0, api: 0, hunt: 0, cook: 0, bed: 0, sleep: 0, ore: 0, smelt: 0, ember: 0, fish: 0, dock: 0, boat: 0, sail: 0, dig: 0 };
     this.quest = 0;
@@ -147,7 +150,7 @@ export class Game {
     this.saved = saved;
     const ultra = this.set.gfx === 'ultra';
     const steps = [
-      ['Membentuk daratan...', () => { this.hf = genHeights(this.seed, this.war); }],
+      ['Membentuk daratan...', () => { this.hf = this.moto ? flatHF() : genHeights(this.seed, this.war); }],
       ['Menumbuhkan rumput...', () => { this.terrain = makeTerrain(this.hf, this.seed); this.scene.add(this.terrain); }],
       ['Mengisi lautan...', () => { this.water = makeWater(); this.scene.add(this.water); }],
       ['Menerbitkan matahari...', () => { this.sky = makeSky(this.scene); this.pieceGroup = new THREE.Group(); this.scene.add(this.pieceGroup); }],
@@ -157,6 +160,7 @@ export class Game {
       ['Menyiapkan tangan...', () => { this.makeHands(); this.makeLights(); this.makeChips(); }],
       ['Memuat dunia...', () => { this.restore(); }],
       ['Membangun istana...', () => { if (this.war) this.makeWar(); }],
+      ['Membangun kota...', () => { if (this.moto) this.makeMoto(); }],
       ['Menyusun grafik...', () => { this.applySettings(); this.r.compile(this.scene, this.cam); }],
     ];
     for (let i = 0; i < steps.length; i++) {
@@ -241,10 +245,11 @@ export class Game {
     this.r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.sky.setShadows(q.shadows);
     const vm = VIEW[this.set.view] || 1;
-    this.sky.fogNear = q.fogN * vm;
-    this.sky.fogFar = q.fogF * vm;
+    const fm = this.moto ? 3 : 1;
+    this.sky.fogNear = q.fogN * vm * fm;
+    this.sky.fogFar = q.fogF * vm * fm;
     this.nature.setLow(q.low);
-    this.nature.setGrass(q.grass && !this.inCave && !this.war);
+    this.nature.setGrass(q.grass && !this.inCave && !this.war && !this.moto);
     this.animals.setCull(q.cull * vm);
     this.animals.setBirds(q.birds && !this.inCave);
     this.scene.traverse((o) => {
@@ -351,8 +356,8 @@ export class Game {
   }
 
   updateQuest(force) {
-    { const e = $('questTxt'); const bx = e && e.parentElement; if (bx) bx.style.display = this.war ? 'none' : ''; }
-    if (this.war) return;
+    { const e = $('questTxt'); const bx = e && e.parentElement; if (bx) bx.style.display = this.war || this.moto ? 'none' : ''; }
+    if (this.war || this.moto) return;
     const q = this.questList();
     let changed = false;
     while (this.quest < q.length && q[this.quest].ok()) {
@@ -414,7 +419,7 @@ export class Game {
   /* ================= TARGET (label di tengah layar) ================= */
   updateTarget() {
     const box = $('target');
-    if (this.build || this.paused || this.dead || this.sleeping || this.driving) { box.classList.remove('show'); return; }
+    if (this.moto || this.build || this.paused || this.dead || this.sleeping || this.driving) { box.classList.remove('show'); return; }
     const tg = this.findTarget(3.6);
     if (!tg) { box.classList.remove('show'); this.tgt = null; return; }
     this.tgt = tg;
@@ -576,6 +581,7 @@ export class Game {
   }
 
   look(dx, dy) {
+    if (this.moto) { this.motoLook(dx, dy); return; }
     if (this.sleeping || this.busy) return;
     const s = 0.0042 * (this.set.sens || 1);
     this.p.yaw -= dx * s;
@@ -583,6 +589,7 @@ export class Game {
   }
 
   pressJump() {
+    if (this.moto) return;
     if (this.paused || this.dead || this.hudEditing) return;
     if (this.driving) { this.stopDrive(); return; }
     if (this.sleeping) return;
@@ -1053,6 +1060,13 @@ export class Game {
       }
     }
     if (!noPlayers) {
+      if (this.bots) {
+        for (const b of this.bots) {
+          if (b.st === 'dead' || Math.abs(b.g.position.y - py) > 1.6) continue;
+          const dx = px - b.x, dz = pz - b.z, d2 = dx * dx + dz * dz;
+          if (d2 < 0.49) { const d = Math.sqrt(d2) || 0.001; px = b.x + (dx / d) * 0.7; pz = b.z + (dz / d) * 0.7; }
+        }
+      }
       for (const r of this.remotes.values()) {
         if (r.sl || r.tx === undefined) continue;
         if (Math.abs(r.y - py) > 1.6) continue;
@@ -1216,6 +1230,11 @@ export class Game {
   /* ================= SURVIVAL ================= */
   hurt(n, silent) {
     if (this.dead) return;
+    if (this.war || this.moto) {
+      /* map War & Drig Bige: tidak bisa mati — hanya efek kena pukul */
+      if (!silent) { Audio.sfx('hurt'); const h = $('hurt'); h.classList.add('show'); setTimeout(() => h.classList.remove('show'), 180); }
+      return;
+    }
     this.p.hp -= n;
     if (this.sleeping && this.online) this.wake(false);
     if (!silent) {
@@ -1228,7 +1247,7 @@ export class Game {
 
   survival(dt) {
     const p = this.p;
-    if (this.dead) return;
+    if (this.dead || this.war || this.moto) return;
     const slow = this.sleeping ? 0.5 : 1;
     p.hunger = Math.max(0, p.hunger - (this.sprinting ? 0.11 : 0.075) * dt * slow);
     p.thirst = Math.max(0, p.thirst - (this.sprinting ? 0.16 : 0.11) * dt * slow);
@@ -1319,7 +1338,9 @@ export class Game {
       if (this.t >= 1) { this.t -= 1; this.day++; }
     }
     const p = this.p;
-    if (!frozen) {
+    if (frozen && this.moto && this.msound) this.msound.update(1200, 0, 0);
+    if (!frozen && this.moto) this.motoUpdate(dt);
+    else if (!frozen) {
       this.updateVessels(dt);
       this.movePlayer(dt);
       this.updateCart(dt);
@@ -1365,7 +1386,7 @@ export class Game {
     this.handR.rotation.x = 0.12 - sw * 1.0;
     this.handR.position.y = this.handR.userData.base.y + sw * 0.06 + (this.moving ? Math.sin(this.bobT * 1) * 0.01 : 0);
     this.handL.position.y = this.handL.userData.base.y + (this.moving ? Math.sin(this.bobT + 1.5) * 0.012 : 0);
-    this.handR.visible = this.handL.visible = !this.sleeping && !this.driving && !this.tp;
+    this.handR.visible = this.handL.visible = !this.sleeping && !this.driving && !this.tp && !this.moto;
     this.updateSelfModel(dt);
     this.updateBubbles(dt);
     if (this.heldFlame) {
@@ -1377,7 +1398,7 @@ export class Game {
     if (this.build) {
       this.ghostT -= dt;
       if (this.ghostT <= 0) { this.ghostT = 0.04; this.updateGhost(); }
-    } else this.updateGhost();
+    } else if (!this.moto) this.updateGhost();
     this.updateRemotes(dt);
     this.updateChips(dt);
     this.tgtT -= dt;
@@ -1400,6 +1421,11 @@ export class Game {
         this.netT = 0.1;
         const m = { t: 'p', n: this.o.name, s: this.def.id, x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), r: +p.yaw.toFixed(2), m: this.moving ? 1 : 0 };
         if (this.pSeq++ % 25 === 0) m.cd = this.lookStr;
+        if (this.moto) {
+          const bb = this.bk;
+          m.sp = +bb.v.toFixed(1); m.st = +bb.st.toFixed(2); m.ln = +bb.lean.toFixed(2);
+          if (this.pSeq % 25 === 1) { m.mo = this.bikeStr; if (this.bikeLv) m.lv = this.bikeLv; }
+        }
         if (this.crouch) m.c = 1;
         if (this.sleeping && this.sleepBed) { m.sl = this.sleepBed.r + 1; m.sy = +(this.sleepBed.vessel ? this.sleepBed.vessel.yaw : 0).toFixed(2); }
         if (this.cart) m.ct = [+this.cart.x.toFixed(1), +this.cart.z.toFixed(1), +this.cart.yaw.toFixed(2)];
@@ -1417,6 +1443,7 @@ export class Game {
     const out = [];
     if (this.inCave) for (const l of this.mine.lights) out.push(l);
     else if (this.war && this.warLights) for (const l of this.warLights) out.push(l);
+    else if (this.moto && this.motoLights) for (const l of this.motoLights) out.push(l);
     else {
       for (const p of this.pieces) {
         const L = PIECE_LIGHT[p.k];
@@ -1494,8 +1521,9 @@ export class Game {
         const g = buildChar((m.cd && unpackLook(m.cd)) || SKINS[m.s] || SKINS[0]);
         g.rotation.order = 'YXZ';
         g.add(this.makeLabel(m.n || 'Pemain'));
-        this.scene.add(g);
+        if (!this.moto) this.scene.add(g);
         r = { g, x: m.x, y: m.y, z: m.z, ry: m.r, mv: 0, t: 0, seen: 0, name: m.n || 'Pemain', sl: 0, sy: 0, lie: 0, crouch: 0, cd: m.cd || '' };
+        if (this.moto) this.motoRemoteNew(r, m, g);
         this.remotes.set(id, r);
         this.toast((m.n || 'Pemain') + ' bergabung');
         Audio.sfx('join');
@@ -1510,9 +1538,13 @@ export class Game {
           const g2 = buildChar(lk);
           g2.rotation.order = 'YXZ';
           g2.add(this.makeLabel(r.name));
-          this.scene.add(g2);
+          if (this.moto && r.bike) r.bike.setRider(g2); else this.scene.add(g2);
           r.g = g2; r.cd = m.cd;
         }
+      }
+      if (this.moto) {
+        r.sp = m.sp || 0; r.tst = m.st || 0; r.tln = m.ln || 0;
+        if ((m.mo && m.mo !== r.mo) || (m.lv && m.lv !== r.lv)) this.motoRemoteCfg(r, m);
       }
       r.tx = m.x; r.ty = m.y; r.tz = m.z; r.try = m.r; r.mv = m.m;
       r.sl = m.sl || 0; r.sy = m.sy || 0; r.cr = m.c ? 1 : 0;
@@ -1598,6 +1630,7 @@ export class Game {
     const r = this.remotes.get(id);
     if (!r) return;
     this.scene.remove(r.g);
+    if (r.bike) { this.scene.remove(r.bike.root); this.disposeBike(r.bike); }
     if (r.cartMesh) this.scene.remove(r.cartMesh);
     this.remotes.delete(id);
     this.sleepers.delete(id);
@@ -1612,6 +1645,7 @@ export class Game {
     for (const [id, r] of this.remotes) {
       if (now - r.seen > 8000) { this.dropRemote(id, true); continue; }
       if (r.tx === undefined) continue;
+      if (this.moto) { this.motoRemoteUpdate(r, dt); continue; }
       const k = Math.min(1, dt * 10);
       r.x = lerp(r.x, r.tx, k); r.y = lerp(r.y, r.ty, k); r.z = lerp(r.z, r.tz, k);
       r.crouch = lerp(r.crouch, r.cr ? 1 : 0, k);
@@ -1640,6 +1674,7 @@ export class Game {
   }
 
   updateHud() {
+    if (this.moto) return;
     const p = this.p;
     $('barHpF').style.width = clamp(p.hp, 0, 100) + '%';
     $('barFoodF').style.width = clamp(p.hunger, 0, 100) + '%';
@@ -1665,15 +1700,18 @@ export class Game {
   }
 
   render() {
-    this.r.render(this.scene, this.cam);
+    if (this.modifOpen && this.modif) this.modif.render(this.r);
+    else this.r.render(this.scene, this.cam);
   }
 
   dispose() {
     this.running = false;
     for (const t of this.timers) { clearTimeout(t); clearInterval(t); }
-    for (const id of ['warHud', 'mShop']) { const e = document.getElementById(id); if (e) e.remove(); }
-    for (const t of this.timers) { clearTimeout(t); clearInterval(t); }
-    for (const id of ['warHud', 'mShop']) { const e = document.getElementById(id); if (e) e.remove(); }
+    for (const id of ['warHud', 'mShop', 'motoHud', 'sModif']) { const e = document.getElementById(id); if (e) e.remove(); }
+    if (this.msound) { this.msound.stop(); this.msound = null; }
+    if (this.modif) this.modif.close();
+    { const hd = document.getElementById('hud'); if (hd) hd.classList.remove('moto'); }
+    this.scene.environment = null;
     Audio.ambient(false);
     if (this.stateTimer) clearTimeout(this.stateTimer);
     if (this.voice) { this.voice.dispose(); this.voice = null; }
@@ -1699,4 +1737,4 @@ export class Game {
   }
 }
 
-Object.assign(Game.prototype, vesselMixin, actionsMixin, emoteMixin, warMixin);
+Object.assign(Game.prototype, vesselMixin, actionsMixin, emoteMixin, warMixin, botMixin, motoMixin);
