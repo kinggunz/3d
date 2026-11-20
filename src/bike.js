@@ -1,5 +1,6 @@
 /* Model motor skuter (gaya Honda Vario) yang detail + semua opsi modifikasi. Arah depan = -z, roda menyentuh y=0. */
 import * as THREE from 'three';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 export const KITS = ['Standar', 'Sport', 'Racing', 'Retro', 'Touring'];
@@ -95,6 +96,46 @@ function burntTex() {
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
+
+function chaikin(p, n) {
+  for (let k = 0; k < n; k++) {
+    const o = [];
+    for (let i = 0; i < p.length; i++) {
+      const a = p[i], b = p[(i + 1) % p.length];
+      o.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]);
+    }
+    p = o;
+  }
+  return p;
+}
+/* profil samping (z,y) -> bodi halus; lebar (x) mengikuti kunci [z, setengah-lebar] */
+function shellGeo(pts, wk, bev, uvb) {
+  const sh = new THREE.Shape(chaikin(pts, 2).map((p) => new THREE.Vector2(p[0], p[1])));
+  const D = 1, bt = 0.1;
+  let g = new THREE.ExtrudeGeometry(sh, { depth: D, bevelEnabled: true, bevelThickness: bt, bevelSize: bev, bevelOffset: -bev, bevelSegments: 4, curveSegments: 6, steps: 1 });
+  const hwAt = (z) => {
+    if (z <= wk[0][0]) return wk[0][1];
+    for (let i = 1; i < wk.length; i++) if (z <= wk[i][0]) { const a = wk[i - 1], b = wk[i]; return a[1] + (b[1] - a[1]) * (z - a[0]) / (b[0] - a[0]); }
+    return wk[wk.length - 1][1];
+  };
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const px = pos.getX(i), py = pos.getY(i), pz = pos.getZ(i);
+    pos.setXYZ(i, ((pz - D / 2) / (D / 2 + bt)) * hwAt(px), py, px);
+  }
+  g.deleteAttribute('normal'); g.deleteAttribute('uv');
+  g = mergeVertices(g, 1e-4);
+  const ix = g.index.array;
+  for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; }
+  g.computeVertexNormals();
+  const b = uvb || [-0.6, 1.2, 0.2, 0.9];
+  const uv = new Float32Array(g.attributes.position.count * 2), P = g.attributes.position;
+  for (let i = 0; i < P.count; i++) { uv[i * 2] = (P.getZ(i) - b[0]) / (b[1] - b[0]); uv[i * 2 + 1] = (P.getY(i) - b[2]) / (b[3] - b[2]); }
+  if (uvb) for (let i = 0; i < P.count; i++) if (P.getX(i) < 0) uv[i * 2] = 1 - uv[i * 2];
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return g;
+}
+
 export function buildBike(src) {
   const cfg = normBike(src);
   const root = new THREE.Group();
@@ -143,6 +184,9 @@ export function buildBike(src) {
   const rb = (w, h, d, r, m, x, y, z, rx = 0, ry = 0, rz = 0, par = frame) => {
     const me = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001)), m);
     me.position.set(x, y, z); me.rotation.set(rx, ry, rz); par.add(me); return me;
+  };
+  const shell = (par, pts, wk, bev, mat, x = 0, uvb) => {
+    const me = new THREE.Mesh(shellGeo(pts, wk, bev, uvb), mat); me.position.x = x; par.add(me); return me;
   };
   const cy = (rt, rb2, h, m, x, y, z, rx = 0, ry = 0, rz = 0, par = frame, seg = 14) => {
     const me = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb2, h, seg), m);
@@ -215,52 +259,51 @@ export function buildBike(src) {
     rb(0.095, 0.05, 0.004, 0.01, glassM, 0.33 * s, 0.31, -0.002, 0, 0, 0.15 * s, steer);
   }
   void bar;
-  /* penutup setang + panel meter */
-  rb(0.5, 0.15, 0.22, 0.05, bodyM, 0, 0.16, -0.02, 0.1, 0, 0, steer);
-  rb(0.26, 0.05, 0.16, 0.02, blackM, 0, 0.245, 0.0, 0.1, 0, 0, steer);
-  rb(0.2, 0.008, 0.11, 0.003, mk({ color: 0x0a1a24, emissive: 0x3ac6ff, emissiveIntensity: 0.5, roughness: 0.2 }), 0, 0.275, 0.0, 0.1, 0, 0, steer);
+  /* penutup setang + lampu depan bentuk V (ala Vario 160) */
+  shell(steer, [[0.14, 0.05], [0.15, 0.16], [0.06, 0.24], [-0.06, 0.26], [-0.15, 0.2], [-0.2, 0.11], [-0.19, 0.01], [-0.1, -0.05], [0.06, -0.04]], [[-0.2, 0.15], [0, 0.2], [0.15, 0.17]], 0.02, bodyM);
+  rb(0.24, 0.03, 0.12, 0.012, blackM, 0, 0.265, 0.03, 0.1, 0, 0, steer);
+  rb(0.18, 0.006, 0.08, 0.002, mk({ color: 0x0a1a24, emissive: 0x3ac6ff, emissiveIntensity: 0.6, roughness: 0.2 }), 0, 0.282, 0.03, 0.1, 0, 0, steer);
+  for (const s of [-1, 1]) {
+    rb(0.2, 0.014, 0.02, 0.006, lampM, 0.1 * s, 0.16, -0.205, 0, 0, 0.14 * s, steer);
+    rb(0.1, 0.034, 0.02, 0.012, blackM, 0.085 * s, 0.1, -0.2, 0, 0, 0.1 * s, steer);
+    rb(0.085, 0.022, 0.02, 0.008, lampM, 0.085 * s, 0.1, -0.21, 0, 0, 0.1 * s, steer);
+  }
+  rb(0.08, 0.016, 0.02, 0.006, blackM, 0, 0.0, -0.17, 0, 0, 0, steer);
 
   /* ---------- badan tetap ---------- */
   /* legshield / cowl depan */
-  rb(0.44, 0.58, 0.12, 0.05, bodyM, 0, 0.62, -0.44, -0.2, 0, 0);
-  rb(0.5, 0.22, 0.2, 0.07, bodyM, 0, 0.95, -0.52, -0.1, 0, 0);
-  rb(0.32, 0.16, 0.1, 0.04, bodyM, 0, 0.4, -0.55, -0.35, 0, 0); /* apron bawah */
-  /* lampu depan LED */
-  rb(0.26, 0.055, 0.03, 0.015, lampM, 0, 0.99, -0.625, -0.1, 0, 0);
-  rb(0.08, 0.04, 0.03, 0.012, lampM, -0.16, 0.95, -0.62, -0.1, 0, 0.0);
-  rb(0.08, 0.04, 0.03, 0.012, lampM, 0.16, 0.95, -0.62, -0.1, 0, 0.0);
-  rb(0.3, 0.012, 0.03, 0.005, mk({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.2 }), 0, 0.915, -0.625, -0.1, 0, 0);
-  /* lampu sein */
-  for (const s of [-1, 1]) rb(0.05, 0.03, 0.03, 0.01, mk({ color: 0xffa000, emissive: 0xff7a00, emissiveIntensity: 0.5 }), 0.26 * s, 0.93, -0.5);
-  /* lantai pijakan */
-  rb(0.42, 0.045, 0.66, 0.015, blackM, 0, 0.28, -0.1);
-  for (let i = 0; i < 5; i++) rb(0.36, 0.01, 0.025, 0.004, darkM, 0, 0.308, -0.33 + i * 0.12);
-  for (const s of [-1, 1]) rb(0.05, 0.17, 0.64, 0.02, bodyM, 0.235 * s, 0.31, -0.08);
+  shell(frame, [[-0.24, 0.3], [-0.28, 0.5], [-0.38, 0.78], [-0.46, 0.95], [-0.53, 0.93], [-0.55, 0.84], [-0.5, 0.62], [-0.42, 0.42], [-0.32, 0.28]], [[-0.55, 0.12], [-0.4, 0.19], [-0.25, 0.16]], 0.025, bodyM);
+  /* lantai pijakan + sirip samping */
+  rb(0.4, 0.035, 0.62, 0.014, blackM, 0, 0.275, -0.04);
+  for (let i = 0; i < 6; i++) rb(0.34, 0.008, 0.022, 0.003, darkM, 0, 0.296, -0.3 + i * 0.1);
+  for (const s of [-1, 1]) shell(frame, [[-0.3, 0.24], [-0.3, 0.33], [-0.1, 0.35], [0.16, 0.4], [0.16, 0.26]], [[-0.3, 0.035], [0.16, 0.04]], 0.015, bodyM, 0.225 * s);
   /* tunnel tengah */
-  rb(0.24, 0.34, 0.3, 0.06, bodyM, 0, 0.46, 0.12);
-  /* bodi bawah jok */
-  rb(0.35, 0.3, 0.74, 0.09, bodyM, 0, 0.53, 0.5);
-  /* panel samping */
-  for (const s of [-1, 1]) rb(0.04, 0.24, 0.62, 0.02, sideM, 0.185 * s, 0.52, 0.5);
-  /* ekor */
-  rb(0.3, 0.17, 0.32, 0.07, bodyM, 0, 0.66, 0.9, -0.3, 0, 0);
+  shell(frame, [[-0.3, 0.3], [-0.22, 0.5], [-0.05, 0.68], [0.25, 0.68], [0.25, 0.3]], [[-0.3, 0.07], [0.25, 0.12]], 0.02, bodyM);
+  /* bodi bawah jok + ekor lancip */
+  shell(frame, [[0.0, 0.42], [0.02, 0.7], [0.35, 0.74], [0.65, 0.75], [0.88, 0.8], [1.08, 0.8], [1.14, 0.74], [1.1, 0.66], [0.95, 0.62], [0.72, 0.62], [0.46, 0.6], [0.36, 0.46], [0.2, 0.38]], [[0, 0.15], [0.5, 0.17], [0.9, 0.13], [1.14, 0.09]], 0.03, bodyM);
+  /* skirt samping + tulisan VARIO */
+  { shell(frame, [[0.1, 0.4], [0.16, 0.6], [0.5, 0.62], [0.7, 0.6], [0.62, 0.42], [0.3, 0.36]], [[0.1, 0.178], [0.7, 0.178]], 0.012, sideM, 0, [0.1, 0.7, 0.36, 0.62]); }
   /* jok */
-  rb(0.31, 0.095, 0.5, 0.04, seatM, 0, 0.745, 0.32);
-  rb(0.29, 0.1, 0.32, 0.045, seatM, 0, 0.77, 0.66, -0.05, 0, 0);
-  rb(0.22, 0.012, 0.42, 0.005, mk({ color: 0x3b3d42, roughness: 0.9 }), 0, 0.797, 0.32);
+  shell(frame, [[0.02, 0.71], [0.04, 0.775], [0.4, 0.795], [0.6, 0.815], [0.8, 0.82], [0.84, 0.76], [0.5, 0.72]], [[0, 0.14], [0.5, 0.15], [0.85, 0.11]], 0.025, seatM);
   /* pegangan belakang */
   const grab = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.15, 0.78, 0.55), new THREE.Vector3(-0.15, 0.84, 0.82), new THREE.Vector3(-0.07, 0.86, 1.0),
-    new THREE.Vector3(0.07, 0.86, 1.0), new THREE.Vector3(0.15, 0.84, 0.82), new THREE.Vector3(0.15, 0.78, 0.55)], false, 'catmullrom', 0.3), 40, 0.014, 8), darkM);
+    new THREE.Vector3(-0.14, 0.83, 0.62), new THREE.Vector3(-0.14, 0.87, 0.85), new THREE.Vector3(-0.07, 0.885, 1.02),
+    new THREE.Vector3(0.07, 0.885, 1.02), new THREE.Vector3(0.14, 0.87, 0.85), new THREE.Vector3(0.14, 0.83, 0.62)], false, 'catmullrom', 0.3), 40, 0.013, 8), darkM);
   frame.add(grab);
-  /* lampu belakang + plat */
-  rb(0.24, 0.05, 0.04, 0.02, tailM, 0, 0.7, 1.05, -0.3, 0, 0);
+  /* lampu belakang LED + plat + sein */
+  rb(0.19, 0.03, 0.03, 0.012, tailM, 0, 0.745, 1.125, 0, 0, 0);
+  for (const s of [-1, 1]) rb(0.03, 0.07, 0.03, 0.012, tailM, 0.1 * s, 0.715, 1.115, 0, 0, 0);
+  rb(0.2, 0.11, 0.012, 0.004, plateM, 0, 0.585, 1.0, 0.25, 0, 0);
+  for (const s of [-1, 1]) {
+    rb(0.05, 0.028, 0.03, 0.01, mk({ color: 0xffa000, emissive: 0xff7a00, emissiveIntensity: 0.45 }), 0.15 * s, 0.67, 1.08);
+    rb(0.05, 0.028, 0.03, 0.01, mk({ color: 0xffa000, emissive: 0xff7a00, emissiveIntensity: 0.45 }), 0.2 * s, 0.84, -0.46);
+  }
   const tailLamp = tailM;
-  rb(0.2, 0.11, 0.012, 0.004, plateM, 0, 0.58, 1.07, 0.18, 0, 0);
-  for (const s of [-1, 1]) rb(0.05, 0.03, 0.03, 0.01, mk({ color: 0xffa000, emissive: 0xff7a00, emissiveIntensity: 0.4 }), 0.14 * s, 0.62, 1.04);
   /* fender belakang */
   const rf = new THREE.Mesh(new THREE.CylinderGeometry(0.265, 0.265, 0.13 * wide, 28, 1, true, 0.02 * Math.PI, 0.5 * Math.PI), blackM);
   rf.material.side = THREE.DoubleSide; rf.rotation.z = Math.PI / 2; rf.position.set(0, 0.275, 0.64); frame.add(rf);
+  /* penutup CVT sisi kiri */
+  shell(frame, [[0.05, 0.18], [0.12, 0.36], [0.42, 0.4], [0.7, 0.36], [0.72, 0.2], [0.4, 0.14]], [[0, 0.03], [0.8, 0.03]], 0.02, darkM, -0.15);
   /* mesin / CVT, swingarm, shock */
   rb(0.16, 0.24, 0.5, 0.05, darkM, -0.08, 0.3, 0.46);
   for (let i = 0; i < 4; i++) rb(0.01, 0.015, 0.2, 0.004, blackM, -0.168, 0.26 + i * 0.04, 0.46);
@@ -329,7 +372,7 @@ export function buildBike(src) {
       if (api.rider) lean.remove(api.rider);
       api.rider = ch;
       if (!ch) return;
-      ch.rotation.set(0, Math.PI, 0); ch.scale.setScalar(0.8);
+      ch.rotation.set(0, Math.PI, 0); ch.scale.setScalar(0.76);
       ch.position.set(0, 0.8 - 0.68 + dy, 0.22);
       lean.add(ch);
       const u = ch.userData;
@@ -341,6 +384,7 @@ export function buildBike(src) {
         u.armL.rotation.z = -0.2; u.armR.rotation.z = 0.2;
         /* helm */
         if (u.head && !u.head.userData.helm) {
+          u.head.children.forEach((c) => { if (c.position.y >= 0.45) c.visible = false; });
           const hm = new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 14), helmM);
           hm.position.set(0, 1.74 - 1.4, -0.02);
           hm.scale.set(1.02, 0.95, 1.1);

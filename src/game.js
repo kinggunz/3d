@@ -1708,6 +1708,7 @@ export class Game {
     this.running = false;
     for (const t of this.timers) { clearTimeout(t); clearInterval(t); }
     for (const id of ['warHud', 'mShop', 'motoHud', 'sModif']) { const e = document.getElementById(id); if (e) e.remove(); }
+    document.body.classList.remove('cineOn', 'modifOn');
     if (this.msound) { this.msound.stop(); this.msound = null; }
     if (this.modif) this.modif.close();
     { const hd = document.getElementById('hud'); if (hd) hd.classList.remove('moto'); }

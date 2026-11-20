@@ -822,8 +822,6 @@ async function goDrig(solo) {
   net = n;
   startGame({ online: true, seed: DRIG_SEED, open: true, moto: true });
 }
-$('onDrig').onclick = () => goDrig(false);
-$('onDrigSolo').onclick = () => goDrig(true);
 $('crGo').onclick = createRoom;
 $('fnGo').onclick = joinPrivate;
 $('onOpen').onclick = goOpenWorld;

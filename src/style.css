@@ -475,3 +475,18 @@ input[type='range'] { padding: 0; width: 180px; accent-color: var(--acc); }
 
 body.modifOn #motoHud{display:none!important}
 body.modifOn #toasts{display:none}
+
+#sModif, #sModif * { pointer-events: auto; }
+#sModif button, #sModif label, #sModif input { touch-action: manipulation; }
+#sModif .mdStage { touch-action: none; }
+
+/* ===== mode sinematik ===== */
+#cineTop, #cineBot { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .7s ease; pointer-events: none; z-index: 2; }
+#cineTop { top: 0; } #cineBot { bottom: 0; }
+#cineTag { position: absolute; left: 50%; bottom: calc(2vh + var(--sab)); transform: translateX(-50%); font-size: 11px; letter-spacing: 4px; color: #e8e8ea; opacity: 0; transition: opacity .7s; z-index: 3; pointer-events: none; }
+body.cineOn #cineTop, body.cineOn #cineBot { height: 11vh; }
+body.cineOn #cineTag { opacity: .75; }
+body.cineOn #mMap, body.cineOn #mSpeed, body.cineOn #mLap, body.cineOn .mSide .mSm:not(#mCine) { opacity: 0; pointer-events: none; transition: opacity .5s; }
+body.cineOn .mPad { opacity: .28; }
+body.cineOn #motoHud::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%); }
+body.cineOn .mSide { z-index: 4; }

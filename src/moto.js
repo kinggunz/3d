@@ -435,12 +435,14 @@ export const motoMixin = {
     const h = document.createElement('div');
     h.id = 'motoHud';
     h.innerHTML = `
+      <div id="cineTop"></div><div id="cineBot"></div><div id="cineTag">&#9679; SINEMATIK</div>
       <canvas id="mMap" width="150" height="150"></canvas>
       <div id="mSpeed"><b id="mSpd">0</b><span>km/h</span><div class="rpmBar"><i id="mRpm"></i></div><em id="mGear"></em></div>
       <div id="mLap"></div>
       <div class="mSide">
         <button id="mHorn" class="mSm">KLAKSON</button>
         <button id="mCam" class="mSm">KAMERA</button>
+        <button id="mCine" class="mSm">SINEMA</button>
         <button id="mHome" class="mSm">GARASI</button>
       </div>
       <div class="mPad left"><button id="mL" class="mBig">&#9664;</button><button id="mR" class="mBig">&#9654;</button></div>
@@ -459,6 +461,7 @@ export const motoMixin = {
     tap('mHorn', () => this.motoHorn());
     tap('mCam', () => this.motoCycleCam());
     tap('mHome', () => this.motoGoHome());
+    tap('mCine', () => this.motoCineToggle());
     this.timers.push(setInterval(() => this.motoDrawMap(), 110));
   },
 
@@ -471,6 +474,7 @@ export const motoMixin = {
       else if (e.code === 'KeyH') this.motoHorn();
       else if (e.code === 'KeyC') this.motoCycleCam();
       else if (e.code === 'KeyG') this.motoGoHome();
+      else if (e.code === 'KeyV') this.motoCineToggle();
     }, sig);
     window.addEventListener('keyup', (e) => {
       if (e.code === 'Space') this.mc.hb = 0;
@@ -479,6 +483,39 @@ export const motoMixin = {
   },
 
   motoHorn() { if (this.msound) this.msound.horn(); },
+  /* ===== mode sinematik: sutradara kamera otomatis + bar film ===== */
+  motoCineToggle() {
+    const c = this.cine || (this.cine = { on: false, t: 0 });
+    if (this.modifOpen) return;
+    c.on = !c.on; c.t = 0;
+    document.body.classList.toggle('cineOn', c.on);
+    this.toast(c.on ? 'Mode sinematik aktif. Ketuk SINEMA lagi untuk keluar' : 'Mode sinematik mati');
+  },
+  motoCineCam(dt, sp, vmax) {
+    const c = this.cine, b = this.bk, cam = this.cam;
+    c.t += dt;
+    const LEN = 5.2, garage = this.inGarage();
+    const shot = garage ? 4 : Math.floor(c.t / LEN) % 6;
+    const u = (c.t % LEN) / LEN;
+    const fx = -Math.sin(b.yaw), fz = -Math.cos(b.yaw), rx = -fz, rz = fx;
+    const X = b.x, Z = b.z;
+    let px, py, pz, ly = 0.7, lx = X, lz = Z, fov = 55;
+    if (shot === 0) { const d = 3.4 - u * 1.2; px = X + rx * 2.3 + fx * d; pz = Z + rz * 2.3 + fz * d; py = 0.5 + u * 0.25; lx = X + fx * 0.4; lz = Z + fz * 0.4; ly = 0.55; fov = 50; }
+    else if (shot === 1) { const d = -1 + u * 2; px = X - rx * 4 + fx * d; pz = Z - rz * 4 + fz * d; py = 1.1; fov = 46; }
+    else if (shot === 2) { px = X - fx * 6.5; pz = Z - fz * 6.5; py = 1 + u * 2.8; lx = X + fx * 3; lz = Z + fz * 3; ly = 0.8; fov = 62; }
+    else if (shot === 3) { const o = 1.2 - u * 2.4; px = X + fx * 5.5 + rx * o; pz = Z + fz * 5.5 + rz * o; py = 1.0; ly = 0.9; fov = 45; }
+    else if (shot === 4) { const a = c.t * 0.45, R = garage ? 2.7 : 4.6; px = X + Math.cos(a) * R; pz = Z + Math.sin(a) * R; py = 1.3; fov = 52; }
+    else { px = X - fx * 1.5 + rx * 1.1; pz = Z - fz * 1.5 + rz * 1.1; py = 0.4; lx = X + fx * 0.3; lz = Z + fz * 0.3; ly = 0.5; fov = 58; }
+    const k = clamp(sp / vmax, 0, 1);
+    fov += k * 12;
+    cam.fov = lerp(cam.fov, fov, Math.min(1, dt * 4)); cam.updateProjectionMatrix();
+    const sh = b.shake * 0.1 + k * 0.012;
+    if (sh > 0) { px += (Math.random() - 0.5) * sh; py += (Math.random() - 0.5) * sh; }
+    if (this.myBike.rider) this.myBike.rider.visible = true;
+    cam.position.set(px, Math.max(0.2, py), pz);
+    cam.lookAt(lx, ly, lz);
+    this.eye.set(px, py, pz);
+  },
   motoCycleCam() {
     this.bk.cam = (this.bk.cam + 1) % 3;
     this.toast(['Kamera belakang', 'Kamera jauh', 'Kamera pengendara'][this.bk.cam]);
@@ -608,6 +645,7 @@ export const motoMixin = {
   },
 
   motoCamera(dt, sp, vmax) {
+    if (this.cine && this.cine.on) { this.motoCineCam(dt, sp, vmax); return; }
     const b = this.bk, co = this.camOff;
     if (co.t > 0) co.t -= dt; else { co.yaw = lerp(co.yaw, 0, Math.min(1, dt * 3)); co.pitch = lerp(co.pitch, 0, Math.min(1, dt * 3)); }
     const cam = this.cam;
