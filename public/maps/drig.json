@@ -1,0 +1,17 @@
+{
+  "id": "drig",
+  "type": "drig",
+  "name": "DRIG BIGE 3D SANTAY",
+  "desc": "Balap motor · kota besar · modif motor",
+  "seed": 52026111,
+  "shard": "drig",
+  "hour": 0.38,
+  "speedMul": 1,
+  "city": {
+    "seed": 5201,
+    "heightMul": 1,
+    "treeEvery": 30,
+    "cars": 0.7,
+    "colors": {}
+  }
+}

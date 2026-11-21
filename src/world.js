@@ -53,8 +53,8 @@ export function makeTerrain(hf, seed) {
   const col = new Float32Array(pos.count * 3);
   const rn = makeNoise(seed + 9);
   const c = new THREE.Color();
-  const sand = new THREE.Color(0.76, 0.68, 0.47);
-  const grass = new THREE.Color(0.28, 0.5, 0.18);
+  const sand = new THREE.Color(0.66, 0.6, 0.46);
+  const grass = new THREE.Color(0.3, 0.4, 0.22);
   const rock = new THREE.Color(0.45, 0.45, 0.47);
   const H = hf.H;
   for (let k = 0; k < pos.count; k++) {
@@ -94,7 +94,7 @@ export function makeWater() {
   T.water.repeat.set(260, 260);
   const m = new THREE.MeshStandardMaterial({
     map: T.water,
-    color: 0x4aa3dc,
+    color: 0x3d6a80,
     transparent: true,
     opacity: 0.78,
     roughness: 0.15,
@@ -177,8 +177,8 @@ export function makeSky(scene) {
   }
 
   const sky = new THREE.Color();
-  const dayCol = new THREE.Color(0x8fc9f0);
-  const duskCol = new THREE.Color(0xf08a4b);
+  const dayCol = new THREE.Color(0xa9bccb);
+  const duskCol = new THREE.Color(0xc99a78);
   const nightCol = new THREE.Color(0x060a1c);
   const sunDir = new THREE.Vector3();
   scene.background = sky;
@@ -272,7 +272,7 @@ export function makeNature(hf, seed, scene) {
   );
   const berries = new THREE.InstancedMesh(
     new THREE.IcosahedronGeometry(0.12, 0),
-    new THREE.MeshStandardMaterial({ color: 0xd8243a, roughness: 0.5 }),
+    new THREE.MeshStandardMaterial({ color: 0x8a3a3a, roughness: 0.5 }),
     MAXB * 3
   );
   const flowers = new THREE.InstancedMesh(
@@ -282,7 +282,7 @@ export function makeNature(hf, seed, scene) {
   );
   const stems = new THREE.InstancedMesh(
     new THREE.CylinderGeometry(0.015, 0.015, 0.32, 3).translate(0, 0.16, 0),
-    new THREE.MeshStandardMaterial({ color: 0x2f7d2a, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: 0x4a6a3a, roughness: 1 }),
     MAXF
   );
   for (let i = 0; i < MAXT * 2; i++) { crown.setMatrixAt(i, ZERO); leaf.setMatrixAt(i, ZERO); }
@@ -309,7 +309,7 @@ export function makeNature(hf, seed, scene) {
     let cr = 0.5 * s, cy = h + 1.6 * s, th = 2.4 * s, hit = 0.85, hp = 6;
     if (kind === 'pine') {
       parts.push(setPart(trunk, nt, x, h - 0.1, z, s, th, s, 0));
-      col.setHSL(0.27 + rnd() * 0.07, 0.5 + rnd() * 0.2, 0.2 + rnd() * 0.1);
+      col.setHSL(0.25 + rnd() * 0.06, 0.3 + rnd() * 0.12, 0.18 + rnd() * 0.08);
       parts.push(setPart(crown, nt * 2, x, h + 1.4 * s, z, 1.7 * s, 3.4 * s, 1.7 * s, rnd() * 6, col));
       parts.push(setPart(crown, nt * 2 + 1, x, h + 3.2 * s, z, 1.2 * s, 2.6 * s, 1.2 * s, rnd() * 6, col));
     } else if (kind === 'round') {
@@ -317,8 +317,8 @@ export function makeNature(hf, seed, scene) {
       cy = h + 1.8 * s;
       parts.push(setPart(trunk, nt, x, h - 0.1, z, s * 1.15, th, s * 1.15, 0));
       const hueShift = rnd();
-      if (hueShift < 0.14) col.setHSL(0.14 + rnd() * 0.03, 0.65, 0.42);
-      else col.setHSL(0.25 + rnd() * 0.07, 0.55 + rnd() * 0.2, 0.28 + rnd() * 0.1);
+      if (hueShift < 0.14) col.setHSL(0.12 + rnd() * 0.03, 0.4, 0.38);
+      else col.setHSL(0.23 + rnd() * 0.06, 0.33 + rnd() * 0.12, 0.24 + rnd() * 0.08);
       parts.push(setPart(leaf, nt * 2, x, h + 2.9 * s, z, 1.7 * s, 1.45 * s, 1.7 * s, rnd() * 6, col));
       parts.push(setPart(leaf, nt * 2 + 1, x + (rnd() - 0.5) * 0.9 * s, h + 3.9 * s, z + (rnd() - 0.5) * 0.9 * s, 1.15 * s, 1.0 * s, 1.15 * s, rnd() * 6, col));
     } else {
@@ -328,7 +328,7 @@ export function makeNature(hf, seed, scene) {
       hit = 0.8;
       hp = 5;
       parts.push(setPart(trunk, nt, x, h - 0.1, z, s * 0.62, th, s * 0.62, 0));
-      col.setHSL(0.31 + rnd() * 0.03, 0.6, 0.3 + rnd() * 0.06);
+      col.setHSL(0.28 + rnd() * 0.03, 0.35, 0.26 + rnd() * 0.06);
       parts.push(setPart(leaf, nt * 2, x, h + th, z, 2.1 * s, 0.32 * s, 2.1 * s, rnd() * 6, col));
       parts.push(setPart(leaf, nt * 2 + 1, x, h + th + 0.28 * s, z, 1.3 * s, 0.3 * s, 1.3 * s, rnd() * 6, col));
     }
@@ -348,7 +348,7 @@ export function makeNature(hf, seed, scene) {
   const addBush = (x, z, h) => {
     if (nb >= MAXB) return false;
     const s = 0.7 + rnd() * 0.5;
-    col.setHSL(0.3 + rnd() * 0.05, 0.55, 0.17 + rnd() * 0.06);
+    col.setHSL(0.27 + rnd() * 0.05, 0.32, 0.16 + rnd() * 0.05);
     const parts = [setPart(bushes, nb, x, h + 0.35 * s, z, s, s * 0.7, s, rnd() * 6, col)];
     for (let k = 0; k < 3; k++) {
       const a = rnd() * 6.28;
@@ -422,7 +422,7 @@ export function makeNature(hf, seed, scene) {
 
   /* bunga hias */
   let nf = 0;
-  const fpal = [0xff5a7a, 0xffd23c, 0xffffff, 0xb066ff, 0xff8a3c];
+  const fpal = [0xb9a98a, 0xc8b878, 0xd8d4c8, 0x9c8aa8, 0xb08a60];
   tries = 0;
   while (nf < MAXF && tries < 30000) {
     tries++;
@@ -572,7 +572,7 @@ export function makeNature(hf, seed, scene) {
           dummy.rotation.set(0, rnd() * 6, 0);
           dummy.updateMatrix();
           gm.setMatrixAt(n, dummy.matrix);
-          gc.setHSL(0.24 + rnd() * 0.08, 0.55, 0.26 + rnd() * 0.12);
+          gc.setHSL(0.23 + rnd() * 0.06, 0.32, 0.24 + rnd() * 0.1);
           gm.setColorAt(n, gc);
           n++;
         }

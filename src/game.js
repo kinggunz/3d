@@ -110,8 +110,9 @@ export class Game {
     this.running = false;
     this.sprinting = false;
     this.seed = opts.seed || 1;
+    this.mapCfg = opts.map || null;
     this.war = !!opts.war || opts.seed === WAR_SEED;
-    this.moto = !!opts.moto || opts.seed === DRIG_SEED;
+    this.moto = !!opts.moto || opts.seed === DRIG_SEED || !!(opts.map && opts.map.type === 'drig');
     this.money = 0; this.armor = 0; this.npcs = [];
     this.stats = { chop: 0, mine: 0, built: 0, api: 0, hunt: 0, cook: 0, bed: 0, sleep: 0, ore: 0, smelt: 0, ember: 0, fish: 0, dock: 0, boat: 0, sail: 0, dig: 0 };
     this.quest = 0;
@@ -1507,7 +1508,8 @@ export class Game {
     c.fillStyle = '#fff';
     c.fillText(String(text).slice(0, 14), 128, 44);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
-    sp.scale.set(1.8, 0.45, 1);
+    sp.material.sizeAttenuation = false;
+    sp.scale.set(0.17, 0.0425, 1);
     sp.position.y = 2.5;
     sp.renderOrder = 5;
     return sp;

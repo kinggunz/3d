@@ -51,12 +51,12 @@ export const actionsMixin = {
       const g = new THREE.Group();
       g.position.set(0.3 * side, -0.34, -0.5);
       g.rotation.set(0.12, -side * 0.18, 0);
-      const a = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.11, 0.4), sleeve);
-      a.position.z = 0.22;
-      const b = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.25), skin);
-      b.position.z = -0.08;
-      const h = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), skin);
-      h.position.z = -0.24;
+      const cz = (r, l, m, z) => { const x = new THREE.Mesh(new THREE.CapsuleGeometry(r, l, 4, 10), m); x.rotation.x = Math.PI / 2; x.position.z = z; return x; };
+      const a = cz(0.058, 0.34, sleeve, 0.22);
+      const b = cz(0.045, 0.2, skin, -0.1);
+      const h = new THREE.Mesh(new THREE.SphereGeometry(0.062, 14, 10), skin);
+      h.scale.set(1, 0.8, 1.15);
+      h.position.z = -0.26;
       g.add(a, b, h);
       this.cam.add(g);
       g.userData.base = g.position.clone();

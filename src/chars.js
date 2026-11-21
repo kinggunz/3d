@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 /* ===== karakter bawaan ===== */
 export const SKINS = [
@@ -69,7 +70,7 @@ export function unpackLook(s) {
 /* ===== pembuat model ===== */
 const mc = new Map();
 const M = (c) => {
-  if (!mc.has(c)) mc.set(c, new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 }));
+  if (!mc.has(c)) { const col = new THREE.Color(c), hsl = {}; col.getHSL(hsl); col.setHSL(hsl.h, hsl.s * 0.78, hsl.l * 0.94); mc.set(c, new THREE.MeshStandardMaterial({ color: col, roughness: 0.78 })); }
   return mc.get(c);
 };
 const geoCache = new Map();
@@ -87,6 +88,23 @@ const bx = (w, h, d, c, x, y, z) => {
 const UP = 0.68; /* tinggi pinggul: badan atas berputar di sini */
 const HEADY = 1.4; /* leher */
 
+
+/* ===== bantuan bentuk halus ===== */
+const gc = new Map();
+const cached = (k, f) => { if (!gc.has(k)) gc.set(k, f()); return gc.get(k); };
+const sphGeo = (r) => cached('s' + r, () => new THREE.SphereGeometry(r, 16, 12));
+const capGeo = (r, len) => cached('c' + r + ',' + len, () => new THREE.CapsuleGeometry(r, len, 4, 10));
+const rbxGeo = (w, h, dd, r) => cached('r' + [w, h, dd, r], () => new RoundedBoxGeometry(w, h, dd, 3, r));
+const coneGeo = new THREE.ConeGeometry(0.05, 0.16, 6);
+const sph = (rx, ry, rz, c, dome) => {
+  const g = dome ? cached('dome', () => new THREE.SphereGeometry(1, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.62)) : cached('unit', () => new THREE.SphereGeometry(1, 16, 12));
+  const m = new THREE.Mesh(g, M(c)); m.scale.set(rx, ry, rz); return m;
+};
+const rbx = (w, h, dd, r, c) => new THREE.Mesh(rbxGeo(w, h, dd, r), M(c));
+const cyl2 = (rt, rb, h, c) => new THREE.Mesh(cached('y' + [rt, rb, h], () => new THREE.CylinderGeometry(rt, rb, h, 12)), M(c));
+const cap2 = (r, len, c) => new THREE.Mesh(capGeo(r, len), M(c));
+const ubx = (m, x, y, z) => { m.position.set(x, y - UP, z); m.castShadow = true; return m; };
+
 export function buildChar(src) {
   const d = normLook(src);
   const g = new THREE.Group(); /* dipakai pemanggil (posisi/rotasi/skala) */
@@ -98,61 +116,67 @@ export function buildChar(src) {
   rig.add(up);
   const ub = (w, h, dd, c, x, y, z) => bx(w, h, dd, c, x, y - UP, z);
 
-  /* kepala */
+  /* kepala (proporsi realistis) */
   const head = new THREE.Group();
   head.position.set(0, HEADY - UP, 0);
   head.scale.setScalar(d.head);
   up.add(head);
+  const hp = (m, x, y, z) => { m.position.set(x, y - HEADY, z); m.castShadow = true; head.add(m); return m; };
   const hb = (w, h, dd, c, x, y, z) => bx(w, h, dd, c, x, y - HEADY, z);
-  head.add(hb(0.46, 0.46, 0.46, d.skin, 0, 1.63, 0));
+  /* leher */
+  hp(cyl2(0.075, 0.085, 0.16, d.skin), 0, 1.42, 0);
+  /* tengkorak + rahang */
+  hp(sph(0.225, 0.27, 0.245, d.skin), 0, 1.66, 0);
+  hp(sph(0.19, 0.17, 0.2, d.skin), 0, 1.55, 0.02);
+  hp(sph(0.03, 0.05, 0.035, d.skin), 0, 1.62, 0.235); /* hidung */
+  for (const sx of [-1, 1]) hp(sph(0.03, 0.06, 0.045, d.skin), 0.225 * sx, 1.64, 0); /* telinga */
   /* rambut */
   const hs = d.hairStyle;
   if (hs !== 1) {
-    head.add(hb(0.5, 0.14, 0.5, d.hair, 0, 1.9, 0));
-    if (hs === 0 || hs === 5) head.add(hb(0.5, 0.3, 0.12, d.hair, 0, 1.74, -0.2));
+    const cap = hp(sph(0.24, 0.28, 0.265, d.hair, true), 0, 1.68, -0.01);
+    cap.rotation.x = -0.12;
+    hp(sph(0.238, 0.13, 0.1, d.hair), 0, 1.84, 0.17); /* poni */
+    if (hs === 0 || hs === 5 || hs === 4) hp(sph(0.23, 0.2, 0.1, d.hair), 0, 1.7, -0.2);
     if (hs === 2) {
-      head.add(hb(0.5, 0.62, 0.12, d.hair, 0, 1.58, -0.2));
-      head.add(hb(0.06, 0.34, 0.4, d.hair, -0.25, 1.7, -0.02));
-      head.add(hb(0.06, 0.34, 0.4, d.hair, 0.25, 1.7, -0.02));
+      hp(rbx(0.5, 0.62, 0.12, 0.05, d.hair), 0, 1.5, -0.2);
+      for (const sx of [-1, 1]) hp(rbx(0.07, 0.4, 0.34, 0.03, d.hair), 0.235 * sx, 1.62, -0.02);
     }
-    if (hs === 3) { head.add(hb(0.12, 0.22, 0.52, d.hair, 0, 2.05, 0)); }
+    if (hs === 3) { for (let i = 0; i < 4; i++) hp(rbx(0.06, 0.12, 0.16, 0.02, d.hair), 0, 1.94 + (i % 2) * 0.01, -0.14 + i * 0.1); }
     if (hs === 4) {
-      for (let i = 0; i < 5; i++) {
-        const s = hb(0.1, 0.2 + (i % 2) * 0.08, 0.1, d.hair, -0.18 + i * 0.09, 2.03 + (i % 2) * 0.03, (i - 2) * 0.05);
-        s.rotation.z = (i - 2) * 0.18;
-        head.add(s);
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        const s = hp(new THREE.Mesh(coneGeo, M(d.hair)), Math.cos(a) * 0.15, 1.96, Math.sin(a) * 0.15);
+        s.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5);
       }
     }
     if (hs === 5) {
-      const t = hb(0.12, 0.4, 0.12, d.hair, 0, 1.58, -0.32);
-      t.rotation.x = 0.25;
-      head.add(t, hb(0.14, 0.1, 0.14, d.hair, 0, 1.82, -0.26));
+      const t = hp(cap2(0.045, 0.3, d.hair), 0, 1.58, -0.3);
+      t.rotation.x = 0.35;
+      hp(sph(0.06, 0.06, 0.06, d.hair), 0, 1.78, -0.26);
     }
   }
-  /* mata */
+  /* alis + mata */
   const es = d.eyeStyle;
   for (const sx of [-1, 1]) {
-    if (es === 0) head.add(hb(0.07, 0.07, 0.03, d.eye, 0.11 * sx, 1.66, 0.235));
-    else if (es === 1) {
-      head.add(hb(0.13, 0.15, 0.025, '#ffffff', 0.11 * sx, 1.66, 0.235));
-      head.add(hb(0.07, 0.1, 0.03, d.eye, 0.11 * sx, 1.65, 0.245));
-    } else head.add(hb(0.11, 0.028, 0.03, d.eye, 0.11 * sx, 1.66, 0.235));
+    hp(rbx(0.1, 0.02, 0.03, 0.01, d.hair), 0.095 * sx, 1.74, 0.215);
+    if (es === 0) { hp(sph(0.027, 0.022, 0.015, '#ffffff'), 0.095 * sx, 1.675, 0.222); hp(sph(0.016, 0.016, 0.012, d.eye), 0.095 * sx, 1.675, 0.232); }
+    else if (es === 1) { hp(sph(0.04, 0.034, 0.017, '#ffffff'), 0.095 * sx, 1.675, 0.222); hp(sph(0.022, 0.026, 0.014, d.eye), 0.095 * sx, 1.675, 0.234); }
+    else { hp(sph(0.035, 0.016, 0.015, '#ffffff'), 0.095 * sx, 1.67, 0.222); hp(sph(0.02, 0.012, 0.012, d.eye), 0.095 * sx, 1.668, 0.232); hp(rbx(0.08, 0.012, 0.02, 0.005, d.skin), 0.095 * sx, 1.69, 0.232); }
   }
   /* mulut */
-  if (d.mouth === 0) head.add(hb(0.12, 0.03, 0.03, '#a3563a', 0, 1.52, 0.235));
+  if (d.mouth === 0) hp(rbx(0.09, 0.012, 0.02, 0.005, '#9a5a4a'), 0, 1.5, 0.215);
   else if (d.mouth === 1) {
-    head.add(hb(0.1, 0.03, 0.03, '#a3563a', 0, 1.5, 0.235));
-    head.add(hb(0.03, 0.03, 0.03, '#a3563a', -0.07, 1.525, 0.235));
-    head.add(hb(0.03, 0.03, 0.03, '#a3563a', 0.07, 1.525, 0.235));
-  } else head.add(hb(0.1, 0.08, 0.03, '#4a1a14', 0, 1.51, 0.235));
+    hp(rbx(0.09, 0.014, 0.02, 0.006, '#9a5a4a'), 0, 1.495, 0.213);
+    for (const sx of [-1, 1]) hp(rbx(0.02, 0.016, 0.02, 0.006, '#9a5a4a'), 0.05 * sx, 1.503, 0.21);
+  } else hp(sph(0.04, 0.025, 0.016, '#4a1a14'), 0, 1.495, 0.216);
   /* kacamata */
   if (d.glasses === 1) {
     for (const sx of [-1, 1]) {
-      head.add(hb(0.17, 0.14, 0.02, d.glassCol, 0.11 * sx, 1.66, 0.25));
-      head.add(hb(0.12, 0.09, 0.025, '#bfe3ff', 0.11 * sx, 1.66, 0.252));
+      hp(rbx(0.14, 0.11, 0.015, 0.04, d.glassCol), 0.095 * sx, 1.675, 0.245);
+      hp(rbx(0.11, 0.08, 0.018, 0.03, '#bfe3ff'), 0.095 * sx, 1.675, 0.248);
     }
-    head.add(hb(0.06, 0.025, 0.02, d.glassCol, 0, 1.67, 0.25));
-  } else if (d.glasses === 2) head.add(hb(0.44, 0.09, 0.03, d.glassCol, 0, 1.66, 0.25));
+    hp(rbx(0.05, 0.015, 0.015, 0.005, d.glassCol), 0, 1.68, 0.245);
+  } else if (d.glasses === 2) hp(rbx(0.42, 0.08, 0.02, 0.025, d.glassCol), 0, 1.675, 0.248);
   /* topi */
   const ht = d.hatStyle, hc = d.hat || '#c9a227';
   const cyl = (rt, rb, h, c, y) => {
@@ -184,40 +208,47 @@ export function buildChar(src) {
   }
 
   /* badan */
-  const sh2 = d.shirtStyle === 2 ? d.shirt2 : d.shirt;
-  up.add(ub(0.54, 0.72, 0.3, d.shirt, 0, 1.04, 0));
-  if (d.shirtStyle === 1) for (let i = 0; i < 3; i++) up.add(ub(0.545, 0.09, 0.305, d.shirt2, 0, 0.82 + i * 0.2, 0));
-  if (d.shirtStyle === 2) up.add(ub(0.545, 0.34, 0.305, d.shirt2, 0, 0.87, 0));
-  void sh2;
+  up.add(ubx(rbx(0.5, 0.66, 0.27, 0.09, d.shirt), 0, 1.03, 0));
+  up.add(ubx(rbx(0.46, 0.24, 0.25, 0.08, d.pants), 0, 0.72, 0));
+  if (d.shirtStyle === 1) for (let i = 0; i < 3; i++) up.add(ubx(rbx(0.505, 0.07, 0.275, 0.03, d.shirt2), 0, 0.84 + i * 0.18, 0));
+  if (d.shirtStyle === 2) up.add(ubx(rbx(0.505, 0.3, 0.275, 0.07, d.shirt2), 0, 0.9, 0));
+  up.add(ubx(rbx(0.5, 0.04, 0.275, 0.015, '#2a2420'), 0, 0.78, 0)); /* ikat pinggang */
+  up.add(ubx(sph(0.11, 0.05, 0.1, d.shirt), 0, 1.4, 0.01));
   if (d.scarf) {
-    up.add(ub(0.6, 0.12, 0.36, d.scarf, 0, 1.38, 0));
-    up.add(ub(0.14, 0.34, 0.05, d.scarf, 0.14, 1.2, 0.2));
+    up.add(ubx(rbx(0.34, 0.1, 0.3, 0.05, d.scarf), 0, 1.4, 0));
+    up.add(ubx(rbx(0.1, 0.34, 0.04, 0.02, d.scarf), 0.12, 1.2, 0.15));
   }
-  if (d.pack) up.add(ub(0.42, 0.5, 0.2, d.pack, 0, 1.08, -0.25), ub(0.3, 0.14, 0.05, '#2a1c10', 0, 1.2, -0.36));
+  if (d.pack) up.add(ubx(rbx(0.4, 0.5, 0.18, 0.06, d.pack), 0, 1.08, -0.22), ubx(rbx(0.28, 0.14, 0.05, 0.02, '#2a1c10'), 0, 1.2, -0.32));
   let cape = null;
   if (d.cape) {
     cape = new THREE.Group();
     cape.position.set(0, 1.36 - UP, -0.17);
-    const cm = bx(0.56, 0.95, 0.04, d.cape, 0, -0.47, -0.02);
-    cape.add(cm);
+    cape.add(bx(0.56, 0.95, 0.04, d.cape, 0, -0.47, -0.02));
     up.add(cape);
   }
   const mkArm = (s) => {
     const a = new THREE.Group();
-    a.position.set(0.37 * s, 1.36 - UP, 0);
-    a.add(bx(0.17, 0.3, 0.17, d.shirt, 0, -0.15, 0));
-    a.add(bx(0.15, 0.36, 0.15, d.skin, 0, -0.48, 0));
+    a.position.set(0.33 * s, 1.34 - UP, 0);
+    const add = (m, y) => { m.position.y = y; m.castShadow = true; a.add(m); };
+    add(new THREE.Mesh(sphGeo(0.085), M(d.shirt)), 0);
+    add(new THREE.Mesh(capGeo(0.075, 0.2), M(d.shirt)), -0.16);
+    add(new THREE.Mesh(capGeo(0.062, 0.24), M(d.skin)), -0.4);
+    add(new THREE.Mesh(sphGeo(0.07), M(d.skin)), -0.58);
     up.add(a);
     return a;
   };
   const mkLeg = (s) => {
     const l = new THREE.Group();
-    l.position.set(0.14 * s, UP, 0);
+    l.position.set(0.12 * s, UP, 0);
+    const add = (m, y, z = 0) => { m.position.set(0, y, z); m.castShadow = true; l.add(m); };
     if (d.pantsStyle === 1) {
-      l.add(bx(0.22, 0.34, 0.22, d.pants, 0, -0.17, 0));
-      l.add(bx(0.19, 0.3, 0.19, d.skin, 0, -0.49, 0));
-    } else l.add(bx(0.22, 0.58, 0.22, d.pants, 0, -0.29, 0));
-    l.add(bx(0.24, 0.1, 0.3, d.shoes, 0, -0.63, 0.03));
+      add(new THREE.Mesh(capGeo(0.105, 0.2), M(d.pants)), -0.16);
+      add(new THREE.Mesh(capGeo(0.075, 0.2), M(d.skin)), -0.44);
+    } else {
+      add(new THREE.Mesh(capGeo(0.105, 0.28), M(d.pants)), -0.2);
+      add(new THREE.Mesh(capGeo(0.085, 0.24), M(d.pants)), -0.46);
+    }
+    add(new THREE.Mesh(rbxGeo(0.17, 0.1, 0.3, 0.04), M(d.shoes)), -0.63, 0.04);
     rig.add(l);
     return l;
   };

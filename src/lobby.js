@@ -10,16 +10,16 @@ export class Lobby {
       cv.width = 8; cv.height = 256;
       const g2 = cv.getContext('2d');
       const gr = g2.createLinearGradient(0, 0, 0, 256);
-      gr.addColorStop(0, '#1b1f5c'); gr.addColorStop(0.45, '#7a3f9c'); gr.addColorStop(0.75, '#ff8a5c'); gr.addColorStop(1, '#ffd36b');
+      gr.addColorStop(0, '#0c1016'); gr.addColorStop(0.45, '#27303c'); gr.addColorStop(0.75, '#5a5f66'); gr.addColorStop(1, '#a9926a');
       g2.fillStyle = gr; g2.fillRect(0, 0, 8, 256);
       this.scene.background = new THREE.CanvasTexture(cv);
     }
-    this.scene.fog = new THREE.Fog(0x7a4a7a, 12, 50);
+    this.scene.fog = new THREE.Fog(0x1a1f26, 12, 50);
     this.cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 120);
     this.cam.position.set(0, 1.35, 5.4);
     this.cam.lookAt(0, 1.05, 0);
 
-    this.scene.add(new THREE.HemisphereLight(0x9bb0ff, 0x3a4a2a, 0.9));
+    this.scene.add(new THREE.HemisphereLight(0x8a9aa8, 0x2a3026, 0.9));
     const key = new THREE.DirectionalLight(0xffd9a8, 1.1);
     key.position.set(3, 5, 4);
     this.scene.add(key);
@@ -87,7 +87,7 @@ export class Lobby {
     /* tenda */
     const tent = new THREE.Mesh(
       new THREE.ConeGeometry(1.6, 1.8, 4),
-      new THREE.MeshStandardMaterial({ color: 0xb4622d, roughness: 1, flatShading: true })
+      new THREE.MeshStandardMaterial({ color: 0x585148, roughness: 1, flatShading: true })
     );
     tent.position.set(3.4, 0.9, -1);
     tent.rotation.y = Math.PI / 4;
@@ -118,7 +118,7 @@ export class Lobby {
       this.flies.push(rr() * 10);
     }
     fg.setAttribute('position', new THREE.BufferAttribute(this.fp, 3));
-    this.flyPts = new THREE.Points(fg, new THREE.PointsMaterial({ color: 0xd8ff7a, size: 5, sizeAttenuation: false }));
+    this.flyPts = new THREE.Points(fg, new THREE.PointsMaterial({ color: 0xcfd6b0, size: 5, sizeAttenuation: false }));
     this.scene.add(this.flyPts);
 
     this.char = null;

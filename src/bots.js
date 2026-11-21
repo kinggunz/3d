@@ -23,11 +23,23 @@ const pick = (a) => a[(Math.random() * a.length) | 0];
 const inArena = (x, z) => x > ARENA.x0 && x < ARENA.x1 && z > ARENA.z0 && z < ARENA.z1;
 
 export const botMixin = {
+  /* pengaturan bot dari file map (maps/war.json) */
+  botCfg() {
+    if (this._bc) return this._bc;
+    const c = (this.mapCfg && this.mapCfg.bots) || {};
+    this._bc = {
+      count: c.count ?? 8, dmgPlayer: c.dmgPlayer ?? 6, dmgBot: c.dmgBot ?? 10, reward: c.reward ?? 150,
+      chatEvery: c.chatEvery || [18, 48],
+      names: c.names && c.names.length ? c.names : FIRST, tails: c.tails && c.tails.length ? c.tails : TAIL,
+      say: c.say && c.say.length ? c.say : SAY, hi: c.hi && c.hi.length ? c.hi : HI, ok: c.ok && c.ok.length ? c.ok : OK,
+    };
+    return this._bc;
+  },
   makeBots() {
     this.bots = [];
     this.botChatT = 12 + Math.random() * 10;
     const used = new Set();
-    const n = 8;
+    const n = this.botCfg().count;
     for (let i = 0; i < n; i++) {
       this.timers.push(setTimeout(() => { if (this.running) this.spawnBot(used); }, 1800 + i * (1500 + Math.random() * 2500)));
     }
@@ -35,7 +47,8 @@ export const botMixin = {
 
   randName(used) {
     for (let k = 0; k < 20; k++) {
-      const nm = (pick(FIRST) + pick(TAIL)).slice(0, 14);
+      const bc = this.botCfg();
+      const nm = (pick(bc.names) + pick(bc.tails)).slice(0, 14);
       if (!used.has(nm)) { used.add(nm); return nm; }
     }
     return 'Pemain' + ((Math.random() * 900 + 100) | 0);
@@ -102,8 +115,8 @@ export const botMixin = {
     if (b.hp <= 0) {
       b.st = 'dead'; b.dead = 2.6; b.vis = [];
       if (byPlayer) {
-        this.money += 150;
-        this.toast(`Kamu mengalahkan ${b.name}! +150 uang`);
+        this.money += this.botCfg().reward;
+        this.toast(`Kamu mengalahkan ${b.name}! +${this.botCfg().reward} uang`);
         Audio.sfx('quest');
         this.warHud();
         this.timers.push(setTimeout(() => this.addChat(b.name, pick(['yah kalah', 'gg kak', 'wkwk mantap', 'sakit woi', 'rematch!']), false), 900 + Math.random() * 1200));
@@ -116,7 +129,7 @@ export const botMixin = {
     if (!this.bots || !this.bots.length || Math.random() < 0.15) return;
     const bot = pick(this.bots);
     const hi = /\b(h+a+i+|h+a+l+o+|hey|hi+)\b/i.test(text);
-    this.timers.push(setTimeout(() => { if (this.running) this.addChat(bot.name, pick(hi ? HI : OK), false); }, 1000 + Math.random() * 2200));
+    this.timers.push(setTimeout(() => { if (this.running) this.addChat(bot.name, pick(hi ? this.botCfg().hi : this.botCfg().ok), false); }, 1000 + Math.random() * 2200));
   },
 
   botUpdate(dt) {
@@ -126,9 +139,9 @@ export const botMixin = {
     const pArena = this.inArena(p.x, p.z, p.y) && !this.dead;
     this.botChatT -= dt;
     if (this.botChatT <= 0) {
-      this.botChatT = 18 + Math.random() * 30;
+      { const ce = this.botCfg().chatEvery; this.botChatT = ce[0] + Math.random() * Math.max(1, ce[1] - ce[0]); }
       const b = pick(bots);
-      if (b.st !== 'dead') this.addChat(b.name, pick(SAY), false);
+      if (b.st !== 'dead') this.addChat(b.name, pick(this.botCfg().say), false);
     }
     for (const b of bots) {
       const u = b.g.userData;
@@ -159,8 +172,8 @@ export const botMixin = {
         else if (b.cd <= 0) {
           b.cd = 0.9 + Math.random() * 0.5; b.swing = 1;
           Audio.sfx('swing');
-          if (tgt.player) { if (Math.random() < 0.8) this.hurt(6 * (1 - ARMOR[this.armor].r)); }
-          else if (Math.random() < 0.7) this.botHurt(tgt.bot, 10, false);
+          if (tgt.player) { if (Math.random() < 0.8) this.hurt(this.botCfg().dmgPlayer * (1 - ARMOR[this.armor].r)); }
+          else if (Math.random() < 0.7) this.botHurt(tgt.bot, this.botCfg().dmgBot, false);
         }
       } else {
         if (b.st === 'fight') { b.st = 'walk'; b.vis = []; }

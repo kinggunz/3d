@@ -311,17 +311,17 @@ export class Net {
   }
 
   /* DRIG BIGE 3D SANTAY: shard drig1.. (maks DRIG_MAX pemain per shard) */
-  async joinDrig(me) {
+  async joinDrig(me, key = 'drig', seed = DRIG_SEED) {
     this.open = true;
     this.isHost = false;
     for (let k = 1; k <= 4; k++) {
       if (this.c) { try { this.c.end(true); } catch (e) { /* abaikan */ } this.c = null; }
       this.roster.clear();
-      await this._open('drig' + k, me);
+      await this._open(key + k, me);
       await this._subAll();
       await new Promise((r) => setTimeout(r, 1200));
       if (this.roster.size <= DRIG_MAX) {
-        this.info = { seed: DRIG_SEED, moto: true };
+        this.info = { seed, moto: true };
         this.started = true;
         this._announce();
         return k;

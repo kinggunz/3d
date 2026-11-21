@@ -26,3 +26,11 @@ PC: WASD, spasi, klik, B bangun, R putar, E aksi, F makan, I tas.
 - **Dunia**: goa/tambang (bijih besi, batu bara), Tungku (lebur besi), Kompor (sup), Gerobak (bawa barang), Pintu buka-tutup.
 - **Laut**: Dermaga, Kapal rakitan sendiri (lantai/dinding di air) + Mesin + Setir.
 - **Buku Panduan** (menu utama & menu jeda), panah goa selalu tampil, ±10 goa, ikon tombol digambar dengan canvas.
+
+## Map berupa file (update lewat ZArchiver)
+Semua map ada di `public/maps/` (di APK: `assets/public/maps/`).
+- `index.json` : daftar file map yang tampil di Room Global.
+- `war.json` : PETUALANGAN WAR (jumlah bot, damage, hadiah, nama & kalimat chat bot).
+- `drig.json`, `drig-pelabuhan.json` : kota balap motor (seed kota, tinggi gedung, jarak pohon, warna, gaya fasad, jam siang, kecepatan).
+Tambah map baru: salin salah satu file `.json`, ubah `id`, `name`, `shard`, `seed`, isi parameter, lalu tulis namanya di `index.json`.
+Lewat ZArchiver: buka APK, masuk `assets/public/maps/`, ganti/tambah file, simpan, lalu tanda tangani ulang & pasang APK.

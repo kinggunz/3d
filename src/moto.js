@@ -61,6 +61,8 @@ export const motoMixin = {
   /* ===== kota ===== */
   makeMoto() {
     const S = this.scene;
+    const MC = (this.mapCfg && this.mapCfg.city) || {};
+    const STY = MC.styles && MC.styles.length ? MC.styles : STYLES;
     this.terrain.visible = false;
     this.water.visible = false;
     for (const n of this.nature.nodes) { if (n.alive) this.nature.kill(n); n.regrow = 1e12; }
@@ -133,9 +135,10 @@ export const motoMixin = {
     mats.wood = L({ color: '#6a4a30' });
     mats.red = L({ color: '#a8231f' });
     mats.tyre = L({ color: '#161617' });
+    for (const k in (MC.colors || {})) if (mats[k] && mats[k].color) { try { mats[k].color.set(MC.colors[k]); } catch (e) { /* warna salah: abaikan */ } }
     mats.lamp = new THREE.MeshBasicMaterial({ color: '#fff8dc' });
     ['#b32222', '#d8d8d8', '#1b1b1d', '#2b4c8c', '#8f8f93', '#e0b020', '#2d6b46', '#6d2b2b'].forEach((c, i) => { mats['car' + i] = L({ color: c }); });
-    STYLES.forEach((s, i) => { mats['w' + i] = L({ map: facadeTex(s[0], s[1], s[2], 100 + i) }); });
+    STY.forEach((s, i) => { mats['w' + i] = L({ map: facadeTex(s[0], s[1], s[2], 100 + i) }); });
     mats.house = L({ map: facadeTex('#e6dcc6', '#40586c', 0, 321) });
     mats.lane = new THREE.MeshBasicMaterial({
       transparent: true, alphaTest: 0.5,
@@ -188,7 +191,7 @@ export const motoMixin = {
     }
 
     /* ---- gedung ---- */
-    const rnd = mulberry32(5201);
+    const rnd = mulberry32(MC.seed || 5201);
     const building = (x0, x1, z0, z1, h, st) => {
       box('w' + st, x0, x1, 0, h, z0, z1, [6, 3.6]);
       box('roof', x0 - 0.25, x1 + 0.25, h, h + 0.5, z0 - 0.25, z1 + 0.25);
@@ -215,7 +218,7 @@ export const motoMixin = {
         if (bi === 5 && bj === 7) continue; /* blok rumah garasi */
         const x0 = road(bi) + RW / 2 + 5, x1 = road(bi + 1) - RW / 2 - 5, z0 = road(bj) + RW / 2 + 5, z1 = road(bj + 1) - RW / 2 - 5;
         const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
-        const down = clamp(1.25 - Math.hypot(cx, cz) / 650, 0.35, 1.2);
+        const down = clamp(1.25 - Math.hypot(cx, cz) / 650, 0.35, 1.2) * (MC.heightMul || 1);
         if (bi === 4 && bj === 4) { /* alun-alun tengah */
           box('concrete', -36, 36, GY - 0.001, GY + 0.04, -36, 36);
           box('white', -5, 5, 0, 1.2, -5, 5); box('white', -3, 3, 1.2, 2.4, -3, 3); box('metal', -0.9, 0.9, 2.4, 26, -0.9, 0.9);
@@ -224,7 +227,7 @@ export const motoMixin = {
           continue;
         }
         const t = rnd();
-        const st = () => (rnd() * STYLES.length) | 0;
+        const st = () => (rnd() * STY.length) | 0;
         if (t < 0.34) {
           const w = 34 + rnd() * 26, d = 34 + rnd() * 26;
           building(cx - w / 2, cx + w / 2, cz - d / 2, cz + d / 2, (24 + rnd() * 70) * down, st());
@@ -238,7 +241,7 @@ export const motoMixin = {
           building(x0, x1, z0, z0 + 17, 7 + rnd() * 5, st());
           building(x0, x1, z1 - 17, z1, 7 + rnd() * 5, st());
           for (let k = 0; k < 6; k++) { const lx = x0 + 12 + k * 11; box('white', lx, lx + 0.2, GY, GY + 0.01, cz - 12, cz - 4); box('white', lx, lx + 0.2, GY, GY + 0.01, cz + 4, cz + 12); }
-          for (let k = 0; k < 6; k++) { if (rnd() < 0.7) car(x0 + 17 + k * 11, cz - 8, 1, (rnd() * 8) | 0); if (rnd() < 0.7) car(x0 + 17 + k * 11, cz + 8, 1, (rnd() * 8) | 0); }
+          for (let k = 0; k < 6; k++) { if (rnd() < (MC.cars ?? 0.7)) car(x0 + 17 + k * 11, cz - 8, 1, (rnd() * 8) | 0); if (rnd() < (MC.cars ?? 0.7)) car(x0 + 17 + k * 11, cz + 8, 1, (rnd() * 8) | 0); }
         } else {
           building(x0, x1, z0, z0 + 26, 14 + rnd() * 10, st());
           building(x0, x1, z1 - 26, z1, 14 + rnd() * 10, st());
@@ -251,7 +254,7 @@ export const motoMixin = {
     const nearCross = (s) => { for (let k = 0; k < NR; k++) if (Math.abs(s - road(k)) < 15) return true; return false; };
     for (let i = 0; i < NR; i++) {
       const c = road(i);
-      for (let s = -CITY + 20; s < CITY - 10; s += 30) {
+      for (let s = -CITY + 20; s < CITY - 10 && MC.treeEvery !== 0; s += (MC.treeEvery || 30)) {
         const ss = s + (rnd() - 0.5) * 6;
         if (nearCross(ss)) continue;
         for (const side of [-1, 1]) {
@@ -558,7 +561,7 @@ export const motoMixin = {
   /* ===== fisika + kamera, tiap frame ===== */
   motoUpdate(dt) {
     const b = this.bk, p = this.p, cfg = this.bikeCfg;
-    this.t = 0.38; /* siang terus */
+    this.t = (this.mapCfg && this.mapCfg.hour) || 0.38; /* siang terus */
     p.hp = 100; p.hunger = 100; p.thirst = 100;
     const busy = this.modifOpen || this.paused;
     const K = this.keys, M = this.mc;
@@ -571,7 +574,7 @@ export const motoMixin = {
     const wantNos = !busy && M.nos && b.nosCd <= 0 && b.nos < 3.2;
     if (wantNos) b.nos += dt; else if (b.nos > 0) { if (b.nos >= 3.2 || !M.nos) { if (b.nos > 0.2) b.nosCd = 4; b.nos = 0; } }
     const boost = wantNos ? 1 : 0;
-    const vmax = E.vmax * (1 + boost * 0.32);
+    const vmax = E.vmax * (1 + boost * 0.32) * ((this.mapCfg && this.mapCfg.speedMul) || 1);
     const acc = 7.4 * E.acc * (1 + boost * 0.8);
     let a = 0;
     if (b.v >= 0) {

@@ -1,8 +1,8 @@
 /* Ikon vektor digambar dengan canvas (pengganti emoji). Setiap ikon = fungsi gambar di kotak 64x64. */
-const INK = '#1b1410';
+const INK = '#15181c';
 
 /* ---- pembantu gambar ---- */
-const st = (g) => { g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 3; };
+const st = (g) => { g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 2; };
 const fillStroke = (g, fill) => { if (fill) { g.fillStyle = fill; g.fill(); } g.stroke(); };
 const poly = (g, pts, fill) => { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); fillStroke(g, fill); };
 const rr = (g, x, y, w, h, r, fill) => {
@@ -202,6 +202,18 @@ export function iconURL(name) {
   g.scale(SIZE / 64, SIZE / 64);
   st(g);
   if (fn) { try { fn(g); } catch (e) { /* abaikan */ } }
+  /* gaya polos: warna diredam jadi nada abu hangat (bukan ikon kartun berwarna-warni) */
+  try {
+    const im = g.getImageData ? cv.getContext('2d').getImageData(0, 0, cv.width, cv.height) : null;
+    if (im) {
+      const d = im.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const l = d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11, k = 0.14;
+        d[i] = (d[i] * k + l * (1 - k)) * 0.97 + 2; d[i + 1] = (d[i + 1] * k + l * (1 - k)) * 0.97; d[i + 2] = (d[i + 2] * k + l * (1 - k)) * 0.93;
+      }
+      cv.getContext('2d').putImageData(im, 0, 0);
+    }
+  } catch (e) { /* abaikan */ }
   u = cv.toDataURL('image/png');
   cache.set(name, u);
   return u;

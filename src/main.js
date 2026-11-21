@@ -2,6 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { Lobby } from './lobby.js';
 import { Game } from './game.js';
+import { MAPS, loadMaps } from './maps.js';
 import { Net, Browse, MAXP, OW_SEED, WORLD_MAX, WAR_SEED, DRIG_SEED } from './net.js';
 import { listWorlds, createWorld, deleteWorld, MAX_WORLDS } from './worlds.js';
 import { Audio } from './audio.js';
@@ -603,16 +604,13 @@ function renderRoomList(list) {
   const w = $('roomList');
   w.innerHTML = '';
   $('onStatus').textContent = list.length ? list.length + ' room aktif' : 'Online';
-  const wr = document.createElement('div');
-  wr.className = 'roomRow warListRow';
-  wr.innerHTML = `<b><span class="rainbow">PETUALANGAN WAR</span><small>Map istana · PvP · Server resmi</small></b><em>${warN} online</em>`;
-  wr.onclick = goWar;
-  w.appendChild(wr);
-  const dr = document.createElement('div');
-  dr.className = 'roomRow warListRow';
-  dr.innerHTML = '<b>DRIG BIGE 3D SANTAY<small>Balap motor · kota besar · modif motor</small></b><em>Main</em>';
-  dr.onclick = () => goDrig(false);
-  w.appendChild(dr);
+  for (const m of MAPS) {
+    const row = document.createElement('div');
+    row.className = 'roomRow warListRow';
+    row.innerHTML = `<b>${m.type === 'war' ? '<span class="rainbow">' + esc(m.name) + '</span>' : esc(m.name)}<small>${esc(m.desc)}</small></b><em>${m.type === 'war' ? warN + ' online' : 'Main'}</em>`;
+    row.onclick = () => (m.type === 'war' ? goWar(m) : goDrig(false, m));
+    w.appendChild(row);
+  }
   if (!list.length) {
     const e = document.createElement('div');
     e.className = 'roomEmpty';
@@ -633,6 +631,7 @@ async function openOnlineHub() {
   show('sOnline');
   stopBrowse();
   warN = 0;
+  loadMaps().then(() => renderRoomList(browse ? browse.list() : []));
   renderRoomList([]);
   $('onStatus').textContent = 'Menghubungkan...';
   const b = new Browse(renderRoomList);
@@ -782,7 +781,7 @@ async function goOpenWorld() {
   startGame({ online: true, seed: OW_SEED, open: true });
 }
 
-async function goWar() {
+async function goWar(map) {
   if (joining) return;
   joining = true;
   $('onStatus').textContent = 'Masuk PETUALANGAN WAR...';
@@ -794,33 +793,34 @@ async function goWar() {
     joining = false;
     net = null;
     flash('Server online tidak terjangkau, masuk War mode sendiri (bot tetap ada)');
-    startGame({ online: false, seed: WAR_SEED, open: true, war: true });
+    startGame({ online: false, seed: WAR_SEED, open: true, war: true, map });
     return;
   }
   joining = false;
   net = n;
-  startGame({ online: true, seed: WAR_SEED, open: true, war: true });
+  startGame({ online: true, seed: WAR_SEED, open: true, war: true, map });
 }
 /* DRIG BIGE 3D SANTAY: coba online (Mabar); kalau gagal / diminta, main sendiri */
-async function goDrig(solo) {
+async function goDrig(solo, map) {
+  map = map || MAPS.find((m) => m.type === 'drig') || { type: 'drig', seed: DRIG_SEED, shard: 'drig' };
   if (joining) return;
-  if (solo) { startGame({ online: false, seed: DRIG_SEED, moto: true }); return; }
+  if (solo) { startGame({ online: false, seed: map.seed, moto: true, map }); return; }
   joining = true;
   $('onStatus').textContent = 'Masuk DRIG BIGE...';
   const n = new Net();
   try {
-    await n.joinDrig(myInfo());
+    await n.joinDrig(myInfo(), map.shard, map.seed);
   } catch (e) {
     n.close();
     $('onStatus').textContent = 'Online';
     flash('Server online tidak terjangkau — main sendiri dulu');
     joining = false;
-    startGame({ online: false, seed: DRIG_SEED, moto: true });
+    startGame({ online: false, seed: map.seed, moto: true, map });
     return;
   }
   joining = false;
   net = n;
-  startGame({ online: true, seed: DRIG_SEED, open: true, moto: true });
+  startGame({ online: true, seed: map.seed, open: true, moto: true, map });
 }
 $('crGo').onclick = createRoom;
 $('fnGo').onclick = joinPrivate;
@@ -851,6 +851,7 @@ async function startGame(o) {
     open: !!o.open,
     war: !!o.war,
     moto: !!o.moto,
+    map: o.map || null,
     name: account.name,
     skinId,
     look: curLook(),

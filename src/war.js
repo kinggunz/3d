@@ -28,7 +28,7 @@ const VILL = [
 const COL = {
   wall: '#efe6d2', gold: '#f2c230', red: '#b3262e', wood: '#6b4423', glass: '#7ec8ff', stone: '#a9a39a', sand: '#e6cf8a',
   path: '#cfc6b0', plaza: '#d9d0b8', ta: '#f4eedd', tb: '#cdb98a', navy: '#1b2f6b', marble: '#f7f3ea', purple: '#5a2a8a',
-  p1: '#e63946', p2: '#2a9d8f', p3: '#f4a261', p4: '#457b9d', maze: '#7b5ea7', mzb: '#5d4380', pil: '#d9c7a0', track: '#3b3f48',
+  p1: '#8a3a3f', p2: '#3f6b66', p3: '#a07a50', p4: '#4a647a', maze: '#5a5560', mzb: '#46424d', pil: '#d9c7a0', track: '#3b3f48',
   lane: '#ffffff', st1: '#c9b27c', st2: '#8c3b3b', bn1: '#d62828', bn2: '#1d6fd6', door: '#5a2e12', disc: '#222633',
 };
 const FLC = ['#d8c9a3', '#e4d5b0', '#cfe0d0', '#e0cfd8', '#cfd6e8', '#e8e0c0', '#d8c0a0', '#c8e0e0', '#e0d0e8', '#f0e0b0', '#e8e8e8'];
@@ -455,7 +455,7 @@ export const warMixin = {
     /* ===== LANTAI 5: LANTAI DISKO ===== */
     {
       const yF = Y + FH * 4;
-      const pal = ['#ff2d95', '#2de2ff', '#ffe600', '#7dff3a', '#a45cff', '#ff7a1a'];
+      const pal = ['#7a3a55', '#3a6a78', '#8a7a3a', '#5a7a40', '#5a4a7a', '#8a5a30'];
       const dm = pal.map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.95, roughness: 0.4 }));
       const tg = new THREE.BoxGeometry(1.92, 0.08, 1.92);
       for (let i = 0; i < 10; i++) for (let j = 0; j < 3; j++) {
@@ -472,7 +472,7 @@ export const warMixin = {
       this.discoBall = ball;
       for (const x of [-11.6, 11.6]) { B('disc', x - 0.7, x + 0.7, yF, yF + 1.8, 8.2, 9.8, true); B('lamp', x - 0.4, x + 0.4, yF + 1.8, yF + 1.9, 8.4, 9.6, false); }
       for (const [x, z] of [[-11, 15], [-6, 15], [0, 15], [6, 15], [11, 15], [-11, 5], [11, 5]]) this.addCoin(x, yF, z, 25);
-      sign('LANTAI DISKO\nTekan tombol Emote!', 0, yF + 2.4, 5.6, 4.6, 0, '#4a1470', '#ffe6ff');
+      sign('LANTAI DISKO\nTekan tombol Emote!', 0, yF + 2.4, 5.6, 4.6, 0, '#2d2f36', '#e4e2dc');
     }
 
     /* ===== LANTAI 6: BALAP RINTANGAN ===== */
@@ -656,7 +656,7 @@ export const warMixin = {
     if (!h) return;
     const safe = this.inSafe(this.p.x, this.p.z, this.p.y);
     const lt = this.warFloor >= 10 ? 'Atap' : 'Lt.' + ((this.warFloor || 0) + 1);
-    h.innerHTML = `<b class="rainbow">PETUALANGAN WAR</b> · 👥 ${this.remotes.size + 1 + (this.bots ? this.bots.length : 0)} · 💰 ${this.money} · 🛡 ${ARMOR[this.armor].n} · ${lt} · <span style="color:${safe ? '#7dff9a' : '#ff6b6b'}">${safe ? 'ZONA AMAN' : 'ARENA PVP'}</span>`;
+    h.innerHTML = `<b class="rainbow">PETUALANGAN WAR</b> · Pemain ${this.remotes.size + 1 + (this.bots ? this.bots.length : 0)} · Uang ${this.money} · ${ARMOR[this.armor].n} · ${lt} · <span style="color:${safe ? '#7dff9a' : '#ff6b6b'}">${safe ? 'ZONA AMAN' : 'ARENA PVP'}</span>`;
     const m = $('mShop');
     if (m && m.classList.contains('show') && !this.nearNpc()) m.classList.remove('show');
   },
@@ -680,7 +680,7 @@ export const warMixin = {
       m.innerHTML = '';
       const c = document.createElement('div');
       c.className = 'card';
-      c.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%"><h3 style="margin:0">🛒 Toko Desa</h3><button id="shopX" class="btn" style="min-width:48px;min-height:44px;padding:6px 14px;font-size:20px">✕</button></div><div style="margin:6px 0">💰 Uang: <b>${this.money}</b> · 🛡 ${ARMOR[this.armor].n}</div>`;
+      c.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%"><h3 style="margin:0">Toko Desa</h3><button id="shopX" class="btn" style="min-width:48px;min-height:44px;padding:6px 14px;font-size:18px">Tutup</button></div><div style="margin:6px 0">Uang: <b>${this.money}</b> · Armor: ${ARMOR[this.armor].n}</div>`;
       ARMOR.forEach((a, i) => {
         if (!i) return;
         const b = document.createElement('button');
