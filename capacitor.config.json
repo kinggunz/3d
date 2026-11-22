@@ -1,0 +1,11 @@
+{
+  "appId": "com.gunzdeveloper.petualangansantay",
+  "appName": "Petualangan Santay",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0e1013"
+  }
+}

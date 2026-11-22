@@ -1,0 +1,21 @@
+{
+  "id": "pelabuhan",
+  "type": "drig",
+  "name": "KOTA PELABUHAN",
+  "desc": "Kota industri · gedung rendah · jalan lebar",
+  "seed": 52026222,
+  "shard": "pelabuhan",
+  "hour": 0.42,
+  "speedMul": 1.1,
+  "city": {
+    "seed": 8842,
+    "heightMul": 0.55,
+    "treeEvery": 60,
+    "cars": 0.5,
+    "colors": { "ground": "#7d8084", "asphalt": "#2d2f33", "walk": "#a3a6a8", "roof": "#5d6368", "wall": "#9a9c98" },
+    "styles": [
+      ["#8a8f94", "#4a6a80", 1], ["#b5a58a", "#3d5266", 0], ["#6e7a85", "#86a6c0", 1],
+      ["#9c4a32", "#2b3a46", 0], ["#c9c6bd", "#44627a", 2]
+    ]
+  }
+}

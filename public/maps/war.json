@@ -1,0 +1,18 @@
+{
+  "id": "war",
+  "type": "war",
+  "name": "PETUALANGAN WAR",
+  "desc": "Map istana · PvP · Server resmi",
+  "bots": {
+    "count": 8,
+    "dmgPlayer": 6,
+    "dmgBot": 10,
+    "reward": 150,
+    "chatEvery": [18, 48],
+    "names": ["Rizky", "Dimas", "Aldi", "Kevin", "Putra", "Nanda", "Bagas", "Raka", "Fajar", "Galang", "Dika", "Bayu", "Yoga", "Ilham", "Rafi", "Satria", "Wahyu", "Farel", "Naufal", "Zidan", "Aira", "Sinta", "Nadia", "Dewi", "Salsa", "Intan"],
+    "tails": ["", "", "_ID", "77", "_gaming", "XD", "99", "_pro", "YT", "07", "ofc", "_santay", "123"],
+    "say": ["haiii", "halo semuanya", "ayo duel di arena", "siapa mau sparing?", "wkwk", "gg", "mantap", "oke", "lawan aku dong", "ada yang tau tangga ke lantai 5?", "kocak", "haii kak", "semangat ya", "nice", "yuk push arena", "mabar yuk", "koin di lantai 3 susah banget", "siapa yang di arena?", "lagi cari koin nih", "armor emas mahal ya"],
+    "hi": ["haiii juga", "halo kak!", "haii", "oiii halo", "hai hai"],
+    "ok": ["oke", "siap", "wkwk iya", "mantap", "hahaha", "gas lah", "boleh tuh", "sip", "iya kak"]
+  }
+}
