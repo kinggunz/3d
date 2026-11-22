@@ -605,3 +605,17 @@ input:focus { box-shadow: 0 0 0 3px rgba(255, 179, 0, 0.45); }
 .frRow .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: #777; }
 .frRow .dot.on { background: #4cd964; } .frRow .dot.pl { background: #ffb300; }
 .frAct { display: flex; gap: 4px; }
+
+/* pilihan mode dunia (Buat Dunia) */
+.modeRow { display: flex; gap: 8px; width: 100%; margin: 6px 0 4px; }
+.modeBtn { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 8px; border-radius: 14px; border: 2px solid rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.06); color: #fff; cursor: pointer; font-family: inherit; touch-action: manipulation; }
+.modeBtn b { font-size: 15px; }
+.modeBtn small { font-size: 11px; line-height: 1.25; opacity: 0.8; }
+.modeBtn.sel { border-color: #ffb43c; background: rgba(226, 103, 42, 0.35); }
+.modeBtn.sel small { opacity: 1; }
+.worldRow small .mtag { display: inline-block; margin-right: 4px; padding: 0 6px; border-radius: 8px; background: rgba(255, 255, 255, 0.18); font-size: 0.85em; }
+.worldRow small .mtag.cr { background: rgba(64, 200, 110, 0.55); }
+/* tombol terbang (hanya mode Creative) */
+.rbtn.fly { display: none; right: calc(204px * var(--hs) + var(--sar)); bottom: calc(122px * var(--hs) + var(--sab)); width: calc(54px * var(--hs)); height: calc(54px * var(--hs)); font-size: calc(24px * var(--hs)); }
+.rbtn.fly.show { display: flex; }
+.rbtn.fly.on { background: rgba(64, 200, 110, 0.85); }

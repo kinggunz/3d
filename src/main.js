@@ -721,7 +721,10 @@ function renderWorlds() {
     nm.innerHTML = ico('globe') + '<span class="lb"></span>';
     nm.lastChild.textContent = wd.name;
     const sm = document.createElement('small');
-    sm.textContent = 'Hari ' + (wd.day || 1) + ' · dibuat ' + dateTxt(wd.created);
+    const tag = document.createElement('span');
+    tag.className = 'mtag' + (wd.mode === 'creative' ? ' cr' : '');
+    tag.textContent = wd.mode === 'creative' ? 'Creative' : 'Survival';
+    sm.append(tag, document.createTextNode('Hari ' + (wd.day || 1) + ' · dibuat ' + dateTxt(wd.created)));
     nm.appendChild(sm);
     const play = document.createElement('button');
     play.className = 'btn small';
@@ -751,7 +754,16 @@ function renderWorlds() {
 $('btnWorlds').onclick = openWorlds;
 $('wlBack').onclick = () => show('sLobby');
 $('wlOpen').onchange = (e) => { settings.openWorld = e.target.checked; store.set('ps_settings', settings); };
+let nwMode = 'survival';
+function setNwMode(m) {
+  nwMode = m === 'creative' ? 'creative' : 'survival';
+  $('nwModeS').classList.toggle('sel', nwMode === 'survival');
+  $('nwModeC').classList.toggle('sel', nwMode === 'creative');
+}
+$('nwModeS').onclick = () => setNwMode('survival');
+$('nwModeC').onclick = () => setNwMode('creative');
 $('wlNew').onclick = () => {
+  setNwMode('survival');
   $('nwMsg').textContent = '';
   $('nwName').value = '';
   show('sNewWorld');
@@ -762,7 +774,7 @@ function submitNewWorld() {
   const n = $('nwName').value.trim();
   if (n.length < 2) { $('nwMsg').textContent = 'Nama dunia minimal 2 huruf.'; return; }
   let wd;
-  try { wd = createWorld(n); } catch (e) { $('nwMsg').textContent = e.message; return; }
+  try { wd = createWorld(n, nwMode); } catch (e) { $('nwMsg').textContent = e.message; return; }
   playWorld(wd);
 }
 $('nwGo').onclick = submitNewWorld;

@@ -146,6 +146,10 @@
         <div class="formCard">
           <h2>Buat Dunia</h2>
           <input id="nwName" maxlength="16" placeholder="Nama dunia" autocomplete="off" />
+          <div class="modeRow">
+            <button id="nwModeS" type="button" class="modeBtn sel"><b>⛺ Survival</b><small>Cari bahan, lapar &amp; haus, bisa mati</small></button>
+            <button id="nwModeC" type="button" class="modeBtn"><b>🛠️ Creative</b><small>Semua barang ada, tidak bisa mati, bisa terbang</small></button>
+          </div>
           <button id="nwGo" class="btn big" data-ic="play">Play</button>
           <div id="nwMsg" class="msg"></div>
         </div>
@@ -295,6 +299,7 @@
       <button id="btnAct" class="rbtn act pe" data-ic="fist"></button>
       <button id="btnJump" class="rbtn jump pe" data-ic="jump"></button>
       <button id="btnCrouch" class="rbtn crouch pe" data-ic="crouch"></button>
+      <button id="btnFly" class="rbtn fly pe" type="button">✈️</button>
       <button id="btnBuild" class="rbtn build pe" data-ic="hammer"></button>
       <button id="btnEat" class="rbtn eat pe" data-ic="meat"></button>
       <button id="btnCtx" class="rbtn ctx pe"></button>

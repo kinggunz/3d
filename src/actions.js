@@ -140,7 +140,7 @@ export const actionsMixin = {
     const panel = $('panelBag');
     if (!panel || !panel.classList.contains('show')) return;
     const p = this.p;
-    $('bagTitle').innerHTML = ico('bag') + `<span class="lb">Tas  ${this.bagCount()}/${CAP_BAG}</span>`;
+    $('bagTitle').innerHTML = ico('bag') + `<span class="lb">${this.creative ? 'Tas  Creative (semua barang)' : 'Tas  ' + this.bagCount() + '/' + CAP_BAG}</span>`;
     const l = $('bagList');
     l.innerHTML = '';
     let any = false;

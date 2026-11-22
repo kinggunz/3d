@@ -9,7 +9,7 @@ import { weatherMixin } from './weather.js';
 import { Airport } from './airport.js';
 import { emoteMixin } from './emotes.js';
 import { Audio } from './audio.js';
-import { ITEMS, ICON, STACK, CAP_BAG, CAP_CART, CRAFT, costText } from './items.js';
+import { ITEMS, ICON, STACK, TOOLS, CAP_BAG, CAP_CART, CRAFT, costText } from './items.js';
 import { BUILD, EDGE_KINDS, PIECE_LIGHT, pieceCols, createPiece, makeFire, makeGhostModel } from './pieces.js';
 import { Vessel, vesselMixin } from './vessel.js';
 import { Mine, MINE_Y, findCaves, makeCave, setupCave, caveHole, caveLocal, caveWorld, CAVE, PORTAL } from './mine.js';
@@ -45,6 +45,12 @@ export class Game {
     this.net = opts.net || null;
     this.wdata = opts.world || null; /* dunia buatan sendiri (disimpan) */
     this.persist = !!opts.world;
+    /* mode dunia: Creative = semua barang, tidak bisa mati, bisa terbang */
+    this.creative = !!(opts.world && opts.world.mode === 'creative');
+    this.flying = false;
+    this.upHeld = false;
+    this.downHeld = false;
+    this.fillT = 0;
     this.scene = new THREE.Scene();
     this.cam = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 1300);
     this.cam.rotation.order = 'YXZ';
@@ -244,8 +250,39 @@ export class Game {
       p.spawn = { x: 3, z: 3 };
       p.yaw = Math.PI * 0.75;
     }
+    if (this.creative) { this.fillCreative(true); p.hp = 100; p.hunger = 100; p.thirst = 100; }
     if (this.eq !== 'tangan' && !(this.p.inv[this.eq] > 0)) this.eq = 'tangan';
     this.updateHeld();
+  }
+
+  /* Creative: semua barang selalu tersedia */
+  fillCreative(all) {
+    let changed = false;
+    for (const k of Object.keys(ITEMS)) {
+      const want = TOOLS.includes(k) ? 1 : 999;
+      const have = this.p.inv[k] || 0;
+      if (all ? have !== want : have < (want > 1 ? 500 : 1)) { this.p.inv[k] = want; changed = true; }
+    }
+    return changed;
+  }
+
+  setFly(on) {
+    if (!this.creative) return;
+    on = !!on;
+    if (on === this.flying) return;
+    if (on && (this.driving || this.sleeping || this.dead || this.paused || this.hudEditing)) return;
+    this.flying = on;
+    this.upHeld = false;
+    this.downHeld = false;
+    const b = $('btnFly');
+    if (b) b.classList.toggle('on', on);
+    if (on) {
+      if (this.crouch) { this.crouch = false; $('btnCrouch').classList.remove('on'); }
+      this.p.on = null;
+      this.p.vy = 3;
+      this.onGround = false;
+      this.toast('Terbang aktif: Lompat = naik, Jongkok = turun');
+    } else this.toast('Terbang mati');
   }
 
   /* kolam 3 lampu titik yang dibagikan ke sumber cahaya terdekat */
@@ -326,6 +363,7 @@ export class Game {
     setIcon($('btnAct'), 'fist');
     $('hintArrow').src = iconURL('arrow');
     $('btnCrouch').classList.remove('on');
+    { const bf = $('btnFly'); if (bf) { bf.classList.remove('on'); bf.classList.toggle('show', this.creative); } }
     $('btnMic').classList.remove('on');
     $('chatFeed').innerHTML = '';
     $('chatBar').classList.remove('show');
@@ -395,8 +433,8 @@ export class Game {
   }
 
   updateQuest(force) {
-    { const e = $('questTxt'); const bx = e && e.parentElement; if (bx) bx.style.display = this.war || this.moto ? 'none' : ''; }
-    if (this.war || this.moto) return;
+    { const e = $('questTxt'); const bx = e && e.parentElement; if (bx) bx.style.display = this.war || this.moto || this.creative ? 'none' : ''; }
+    if (this.war || this.moto || this.creative) return;
     const q = this.questList();
     let changed = false;
     while (this.quest < q.length && q[this.quest].ok()) {
@@ -586,8 +624,9 @@ export class Game {
       el.addEventListener('lostpointercapture', () => el.classList.remove('down'), sig);
     };
     btn('btnAct', () => this.pressAct(), () => { this.act = false; });
-    btn('btnJump', () => this.pressJump());
-    btn('btnCrouch', () => this.toggleCrouch());
+    btn('btnJump', () => this.pressJump(), () => { this.upHeld = false; });
+    btn('btnCrouch', () => { if (this.flying) this.downHeld = true; else this.toggleCrouch(); }, () => { this.downHeld = false; });
+    btn('btnFly', () => this.setFly(!this.flying));
     btn('btnBuild', () => this.toggleBuild());
     btn('btnRot', () => { this.rot = (this.rot + 1) % 4; });
     btn('btnEat', () => this.eat());
@@ -659,6 +698,7 @@ export class Game {
     if (this.paused || this.dead || this.hudEditing) return;
     if (this.driving) { this.stopDrive(); return; }
     if (this.sleeping) return;
+    if (this.flying) { this.upHeld = true; return; }
     this.jumpBuf = 0.18;
   }
 
@@ -712,6 +752,15 @@ export class Game {
 
   /* terima item: tas dulu, kalau penuh masuk gerobak (kalau ada di dekat) */
   give(item, n, silent) {
+    if (this.creative) {
+      this.p.inv[item] = TOOLS.includes(item) ? 1 : Math.max(this.p.inv[item] || 0, 999);
+      if (!silent) this.toast(`+${n} ${ITEMS[item]}`);
+      const t = performance.now();
+      if (t - this.lastPick > 120) { Audio.sfx('pickup'); this.lastPick = t; }
+      this.renderBag();
+      this.updateBuildAfford();
+      return;
+    }
     let left = n;
     if (STACK.includes(item)) {
       const room = Math.max(0, CAP_BAG - this.bagCount());
@@ -738,11 +787,13 @@ export class Game {
   }
 
   has(cost) {
+    if (this.creative) return true;
     for (const k in cost) if ((this.p.inv[k] || 0) < cost[k]) return false;
     return true;
   }
 
   pay(cost) {
+    if (this.creative) return;
     for (const k in cost) this.p.inv[k] -= cost[k];
     this.checkEq();
     this.renderBag();
@@ -1196,13 +1247,16 @@ export class Game {
     const wz = -cos * my - sin * mx;
     this.crouchT = lerp(this.crouchT, this.crouch ? 1 : 0, Math.min(1, dt * 10));
     const hgt = this.crouch ? 1.15 : 1.7;
+    if (this.flying && (this.driving || this.sleeping || this.dead)) this.setFly(false);
+    if (this.flying && p.on) p.on = null; /* terbang meninggalkan dek kapal */
 
     let V = p.on;
     const gT = this.terr(p.x, p.z);
     const g0 = V ? p.y : this.groundAt(p.x, p.z, p.y);
-    const swim = !V && !this.inCave && gT < -0.55 && g0 <= gT + 0.01;
+    const swim = !V && !this.flying && !this.inCave && gT < -0.55 && g0 <= gT + 0.01;
     const run = (this.keys.shift || len > 0.92) && !this.crouch;
     let sp = swim ? 2.4 : this.crouch ? 2.0 : run ? 5.6 : 4.0;
+    if (this.flying) sp = run ? 13 : 8;
     if (this.hitch && this.cart) sp *= 0.85;
     this.moving = len > 0.1;
     this.sprinting = run && len > 0.1 && !swim;
@@ -1235,9 +1289,9 @@ export class Game {
       }
       gT2 = this.terr(p.x, p.z);
       g2 = this.groundAt(p.x, p.z, p.y);
-      swim2 = !this.inCave && gT2 < -0.55 && g2 <= gT2 + 0.01;
+      swim2 = !this.flying && !this.inCave && gT2 < -0.55 && g2 <= gT2 + 0.01;
       /* naik ke kapal (juga saat melompat dari dermaga / terjun ke atas dek) */
-      if (!this.inCave && this.vessels.length) {
+      if (!this.inCave && !this.flying && this.vessels.length) {
         for (const W of this.vessels) {
           if (Math.hypot(W.x - p.x, W.z - p.z) > W.rad + 1.5) continue;
           const [lx, lz] = W.w2l(p.x, p.z);
@@ -1258,6 +1312,23 @@ export class Game {
       this.onGround = false;
       this.jumpBuf = 0;
       if (this.crouch) { this.crouch = false; $('btnCrouch').classList.remove('on'); }
+    } else if (this.flying) {
+      /* mode terbang (Creative): Lompat = naik, Jongkok = turun, melayang saat dilepas */
+      const up = locked || drv ? 0 : (this.upHeld ? 1 : 0) - (this.downHeld ? 1 : 0);
+      p.vy = lerp(p.vy, up * 7.5, Math.min(1, dt * 8));
+      let ny = p.y + p.vy * dt;
+      if (p.vy > 0) {
+        const cb = this.ceilBelow(p.y, ny, 1.7);
+        if (cb !== null) { ny = cb - 1.7; p.vy = 0; }
+        if (ny > 150) { ny = 150; p.vy = 0; }
+      }
+      if (ny <= g2) {
+        ny = g2; p.vy = 0; this.onGround = true;
+        if (this.downHeld) this.setFly(false); /* turun sampai tanah: mendarat */
+      } else this.onGround = false;
+      p.y = ny;
+      this.wasAir = false;
+      this.jumpBuf = 0;
     } else {
       if (this.onGround) this.coyote = 0.12; else this.coyote -= dt;
       this.jumpBuf -= dt;
@@ -1316,6 +1387,7 @@ export class Game {
   /* ================= SURVIVAL ================= */
   hurt(n, silent) {
     if (this.dead || this.intro) return;
+    if (this.creative) return; /* Creative: tidak bisa mati */
     if (this.war || this.moto) {
       /* map War & Drig Bige: tidak bisa mati — hanya efek kena pukul */
       if (!silent) { Audio.sfx('hurt'); const h = $('hurt'); h.classList.add('show'); setTimeout(() => h.classList.remove('show'), 180); }
@@ -1334,6 +1406,12 @@ export class Game {
   survival(dt) {
     const p = this.p;
     if (this.dead || this.war || this.moto) return;
+    if (this.creative) {
+      p.hp = 100; p.hunger = 100; p.thirst = 100;
+      this.fillT -= dt;
+      if (this.fillT <= 0) { this.fillT = 2; if (this.fillCreative(false)) this.renderBag(); }
+      return;
+    }
     const slow = this.sleeping ? 0.5 : 1;
     p.hunger = Math.max(0, p.hunger - (this.sprinting ? 0.11 : 0.075) * dt * slow);
     p.thirst = Math.max(0, p.thirst - (this.sprinting ? 0.16 : 0.11) * dt * slow);

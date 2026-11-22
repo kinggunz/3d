@@ -3,7 +3,7 @@ const KEY = 'ps_hud_v1';
 const $ = (id) => document.getElementById(id);
 
 export const HUD_ITEMS = [
-  ['joy', 'Joystick'], ['btnAct', 'Aksi'], ['btnJump', 'Lompat'], ['btnCrouch', 'Jongkok'],
+  ['joy', 'Joystick'], ['btnAct', 'Aksi'], ['btnJump', 'Lompat'], ['btnCrouch', 'Jongkok'], ['btnFly', 'Terbang'],
   ['btnBuild', 'Bangun'], ['btnEat', 'Makan'], ['btnCtx', 'Tombol Konteks'], ['btnMic', 'Mic'],
   ['btnChat', 'Chat'], ['btnEmote', 'Emote'], ['btnBag', 'Tas'], ['btnPause', 'Jeda'], ['hotbar', 'Hotbar Alat'],
   ['stats', 'Status'], ['clockTxt', 'Jam'], ['quest', 'Misi'], ['buildBar', 'Bar Bangun'], ['chatFeed', 'Pesan Chat'],

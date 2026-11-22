@@ -29,13 +29,14 @@ export function listWorlds() {
   return list.slice().sort((a, b) => (b.last || 0) - (a.last || 0));
 }
 
-export function createWorld(name) {
+export function createWorld(name, mode) {
   const list = listWorlds();
   if (list.length >= MAX_WORLDS) throw new Error('Maksimal ' + MAX_WORLDS + ' dunia. Hapus satu dulu.');
   const w = {
     id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
     name: name.trim().slice(0, 16),
     seed: ((Math.random() * 1e9) | 0) + 1,
+    mode: mode === 'creative' ? 'creative' : 'survival',
     created: Date.now(),
     last: Date.now(),
     day: 1,
