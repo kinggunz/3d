@@ -3,14 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-  <meta name="theme-color" content="#0a1538" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Petualangan Santay</title>
-  <link rel="icon" href="logo.svg" />
+  <link rel="icon" href="logo-g.svg" />
 </head>
 <body>
   <canvas id="gl"></canvas>
 
   <div id="app">
+    <!-- SPLASH 3 DETIK: LOGO G -->
+    <div id="sSplash" class="screen opaque splash">
+      <img class="splashLogo" src="logo-g.svg" alt="G" />
+    </div>
+
     <!-- LOADING -->
     <div id="sLoad" class="screen opaque">
       <canvas id="loadBg"></canvas>
@@ -21,7 +29,6 @@
         <div class="bar"><i id="loadFill"></i></div>
         <div id="loadPct" class="pct">1%</div>
         <div id="loadTip" class="tip"></div>
-        <small>by Gunz Developer</small>
       </div>
     </div>
 
@@ -32,29 +39,87 @@
         <h1 id="introTitle" class="introTitle">PETUALANGAN SANTAY</h1>
         <div id="introForm" class="hidden">
           <h2>Buat Akun</h2>
-          <input id="inName" maxlength="14" placeholder="Masukkan nama" autocomplete="off" />
-          <button id="btnMakeAcc" class="btn big">Buat Akun</button>
+          <input id="inName" maxlength="14" placeholder="Nama" autocomplete="off" />
+          <input id="inAge" type="number" inputmode="numeric" min="5" max="99" placeholder="Umur" autocomplete="off" />
+          <div class="genderRow">
+            <button id="gdM" type="button" class="btn genderBtn">Laki-laki</button>
+            <button id="gdF" type="button" class="btn genderBtn">Perempuan</button>
+          </div>
+          <div id="inMsg" class="msg"></div>
+          <button id="btnMakeAcc" class="btn big">Lanjut</button>
+        </div>
+        <div id="introConfirm" class="hidden">
+          <h2>Konfirmasi Akun</h2>
+          <div class="confBox">
+            <div><span>Nama</span><b id="cfName"></b></div>
+            <div><span>Umur</span><b id="cfAge"></b></div>
+            <div><span>Jenis kelamin</span><b id="cfGender"></b></div>
+          </div>
+          <small class="hint">Pastikan data sudah benar.</small>
+          <div class="confBtns">
+            <button id="btnConfBack" class="btn dim">Ubah</button>
+            <button id="btnConfOk" class="btn big">Konfirmasi</button>
+          </div>
         </div>
         <div id="introTap" class="hidden">
           <div id="helloName" class="hello"></div>
           <div class="tapText">Ketuk di mana saja untuk masuk</div>
         </div>
       </div>
-      <small class="credit">by Gunz Developer</small>
     </div>
 
     <!-- LOBI -->
     <div id="sLobby" class="screen">
-      <div class="topLeft"><div class="chip" id="lbName">Santay</div></div>
+      <button id="lbProfile" class="profileChip" type="button"><canvas id="lbAvatar" width="96" height="96"></canvas><span id="lbName">Santay</span></button>
       <div class="topRight"><button id="lbSet" class="iconBtn" data-ic="gear"></button></div>
       <div class="leftMid"><button id="lbVault" class="btn side" data-ic="chest">Vault</button><button id="lbEdit" class="btn side" data-ic="person">Editor</button><button id="lbGuide" class="btn side" data-ic="book">Panduan</button></div>
-      <div class="charTag" id="lbChar">Santay</div>
+      <div class="charTag nameBelow" id="lbChar">Santay</div>
+      <div id="lbHint" class="lbHint">Geser untuk memutar · ketuk karakter untuk emote</div>
       <div class="bottomRight">
-        <div class="startLabel">MULAI</div>
-        <button id="btnOnline" class="btn modeBtn on" data-ic="globe">Online</button>
-        <button id="btnWorlds" class="btn modeBtn off" data-ic="world">Buat Dunia</button>
+        <button id="btnMode" class="btn modeBtn modeBox" type="button">Main Solo</button>
+        <button id="btnStart" class="btn start" type="button">MULAI</button>
+        <div class="miniRow"><button id="btnOnline" class="btn small dim" data-ic="globe">Online</button><button id="btnWorlds" class="btn small dim" data-ic="world">Dunia</button></div>
       </div>
-      <small class="credit">by Gunz Developer</small>
+    </div>
+
+    <!-- MENU MODE: SOLO / SQUAD -->
+    <div id="mMode" class="modal">
+      <div class="card">
+        <h3>Pilih Mode Main</h3>
+        <div class="modeOpts">
+          <button id="mdSolo" class="modeOpt" type="button"><b>Solo</b><small>Main sendirian</small></button>
+          <button id="mdSquad" class="modeOpt" type="button"><b>Squad</b><small>Main bareng teman (1-10)</small></button>
+        </div>
+        <div id="squadPick" class="squadPick hidden">
+          <label>Jumlah pemain squad</label>
+          <div class="stepper"><button id="sqMinus" type="button" class="btn small">-</button><b id="sqN">4</b><button id="sqPlus" type="button" class="btn small">+</button></div>
+        </div>
+        <button id="modeOk" class="btn">Pilih</button>
+      </div>
+    </div>
+
+    <!-- PROFIL -->
+    <div id="sProfile" class="screen shade">
+      <button id="pfBack" class="btn back" data-ic="back">Kembali</button>
+      <div class="pfWrap">
+        <div class="pfLeft"><canvas id="pfChar" width="360" height="520"></canvas></div>
+        <div class="pfRight">
+          <div class="pfName" id="pfName">Santay</div>
+          <div class="pfMeta" id="pfMeta"></div>
+          <label class="pfLbl">Bio</label>
+          <textarea id="pfBio" maxlength="120" placeholder="Tulis bio kamu..."></textarea>
+          <button id="pfSave" class="btn small">Simpan Bio</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PILIHAN EMOTE DI LOBI -->
+    <div id="mLbEmote" class="modal">
+      <div class="card wide">
+        <h3>Emote</h3>
+        <div id="lbEmoteGrid" class="lbEmoteGrid"></div>
+        <button id="lbEmoteClose" class="btn">Tutup</button>
+      </div>
     </div>
 
     <!-- DUNIA SAYA -->

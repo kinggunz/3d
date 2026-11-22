@@ -1,125 +1,107 @@
 import * as THREE from 'three';
-import { buildChar, SKINS, idlePose, resetPose, lookFromSkin, normLook, unpackLook } from './chars.js';
+import { buildChar, SKINS, idlePose, resetPose, lookFromSkin, normLook, unpackLook, applyEmote } from './chars.js';
 import { mulberry32 } from './util.js';
 
 export class Lobby {
   constructor() {
     this.scene = new THREE.Scene();
+    /* langit siang hari yang natural */
     {
       const cv = document.createElement('canvas');
       cv.width = 8; cv.height = 256;
       const g2 = cv.getContext('2d');
       const gr = g2.createLinearGradient(0, 0, 0, 256);
-      gr.addColorStop(0, '#0c1016'); gr.addColorStop(0.45, '#27303c'); gr.addColorStop(0.75, '#5a5f66'); gr.addColorStop(1, '#a9926a');
+      gr.addColorStop(0, '#4f9fe0'); gr.addColorStop(0.55, '#8fc6ee'); gr.addColorStop(0.85, '#cfe6f2'); gr.addColorStop(1, '#e6efe0');
       g2.fillStyle = gr; g2.fillRect(0, 0, 8, 256);
       this.scene.background = new THREE.CanvasTexture(cv);
     }
-    this.scene.fog = new THREE.Fog(0x1a1f26, 12, 50);
-    this.cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 120);
+    this.scene.fog = new THREE.Fog(0xb9d9ee, 22, 85);
+    this.cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 160);
     this.cam.position.set(0, 1.35, 5.4);
     this.cam.lookAt(0, 1.05, 0);
 
-    this.scene.add(new THREE.HemisphereLight(0x8a9aa8, 0x2a3026, 0.9));
-    const key = new THREE.DirectionalLight(0xffd9a8, 1.1);
-    key.position.set(3, 5, 4);
-    this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x7a9bff, 0.6);
-    rim.position.set(-4, 3, -3);
-    this.scene.add(rim);
+    /* cahaya matahari alami: hemisfer langit-tanah + sinar matahari hangat */
+    this.scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x6f8a4a, 1.05));
+    const sun = new THREE.DirectionalLight(0xfff4de, 1.7);
+    sun.position.set(4, 7, 5);
+    this.scene.add(sun);
+    const fill = new THREE.DirectionalLight(0xcfe0ff, 0.35);
+    fill.position.set(-5, 3, -2);
+    this.scene.add(fill);
 
     const plat = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.1, 2.4, 0.3, 32),
-      new THREE.MeshStandardMaterial({ color: 0x4d6b35, roughness: 1 })
+      new THREE.BoxGeometry(4.6, 0.3, 4.6),
+      new THREE.MeshStandardMaterial({ color: 0x6fa24a, roughness: 1 })
     );
     plat.position.y = -0.15;
     this.scene.add(plat);
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(2.15, 0.07, 8, 48),
-      new THREE.MeshStandardMaterial({ color: 0xc9a227, roughness: 0.6, metalness: 0.3 })
+    const edge = new THREE.Mesh(
+      new THREE.BoxGeometry(4.8, 0.14, 4.8),
+      new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 1 })
     );
-    ring.rotation.x = Math.PI / 2;
-    this.scene.add(ring);
+    edge.position.y = -0.37;
+    this.scene.add(edge);
     const ground = new THREE.Mesh(
-      new THREE.CircleGeometry(60, 40),
-      new THREE.MeshStandardMaterial({ color: 0x1d3a2a, roughness: 1 })
+      new THREE.CircleGeometry(80, 40),
+      new THREE.MeshStandardMaterial({ color: 0x5f9440, roughness: 1 })
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.31;
     this.scene.add(ground);
 
-    /* pepohonan latar */
+    /* pohon kotak (balok) di latar */
     const rr = mulberry32(777);
-    const trunkM = new THREE.MeshStandardMaterial({ color: 0x4a3320, roughness: 1 });
-    for (let i = 0; i < 46; i++) {
+    const trunkM = new THREE.MeshStandardMaterial({ color: 0x7a5530, roughness: 1 });
+    const leafMs = [0x3f8a34, 0x4a9a3c, 0x377a2e].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 1 }));
+    for (let i = 0; i < 40; i++) {
       const a = rr() * Math.PI * 2;
-      const rad = 8 + rr() * 22;
+      const rad = 8 + rr() * 24;
       const x = Math.cos(a) * rad, z = -Math.abs(Math.sin(a)) * rad - 2;
-      const s = 1 + rr() * 1.4;
-      const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.2 * s, 0.3 * s, 2.4 * s, 6), trunkM);
-      tr.position.set(x, 1.1 * s - 0.3, z);
-      const cr = new THREE.Mesh(
-        new THREE.ConeGeometry(1.5 * s, 4 * s, 7),
-        new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(0.3 + rr() * 0.05, 0.45, 0.15 + rr() * 0.07), roughness: 1 })
-      );
-      cr.position.set(x, 3.2 * s, z);
-      this.scene.add(tr, cr);
+      const s = 0.9 + rr() * 0.9;
+      const tr = new THREE.Mesh(new THREE.BoxGeometry(0.55 * s, 2.6 * s, 0.55 * s), trunkM);
+      tr.position.set(x, 1.3 * s - 0.3, z);
+      const lm = leafMs[(rr() * 3) | 0];
+      const c1 = new THREE.Mesh(new THREE.BoxGeometry(2.8 * s, 1.5 * s, 2.8 * s), lm);
+      c1.position.set(x, 3.1 * s - 0.3, z);
+      const c2 = new THREE.Mesh(new THREE.BoxGeometry(1.8 * s, 1.2 * s, 1.8 * s), lm);
+      c2.position.set(x, 4.3 * s - 0.3, z);
+      this.scene.add(tr, c1, c2);
     }
 
-    /* api unggun */
-    const fire = new THREE.Group();
-    const logM = new THREE.MeshStandardMaterial({ color: 0x5a3a1c, roughness: 1 });
-    for (let i = 0; i < 3; i++) {
-      const l = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.9, 6), logM);
-      l.rotation.z = Math.PI / 2;
-      l.rotation.y = (i * Math.PI) / 3;
-      l.position.y = 0.1;
-      fire.add(l);
+    /* awan kotak */
+    this.clouds = [];
+    const cmat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, fog: false });
+    for (let i = 0; i < 9; i++) {
+      const g = new THREE.Group();
+      const n = 3 + ((rr() * 3) | 0);
+      for (let k = 0; k < n; k++) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(5 + rr() * 4, 1.6 + rr(), 3 + rr() * 2), cmat);
+        m.position.set(k * 4 - n * 2 + rr() * 2, rr() * 1.2, rr() * 2);
+        g.add(m);
+      }
+      g.position.set((rr() - 0.5) * 120, 22 + rr() * 8, -40 - rr() * 40);
+      this.scene.add(g);
+      this.clouds.push(g);
     }
-    this.flame = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.9, 6), new THREE.MeshBasicMaterial({ color: 0xff8a2a }));
-    this.flame.position.y = 0.55;
-    fire.add(this.flame);
-    fire.position.set(-3.1, 0, 0.6);
-    this.scene.add(fire);
-    this.fireLight = new THREE.PointLight(0xff9a3c, 2.6, 14, 2);
-    this.fireLight.position.set(-3.1, 1.1, 0.8);
-    this.scene.add(this.fireLight);
+    const sunMesh = new THREE.Mesh(new THREE.BoxGeometry(7, 7, 1), new THREE.MeshBasicMaterial({ color: 0xfff3b0, fog: false }));
+    sunMesh.position.set(26, 30, -75);
+    this.scene.add(sunMesh);
 
-    /* tenda */
+    /* tenda sederhana (balok) */
     const tent = new THREE.Mesh(
-      new THREE.ConeGeometry(1.6, 1.8, 4),
-      new THREE.MeshStandardMaterial({ color: 0x585148, roughness: 1, flatShading: true })
+      new THREE.BoxGeometry(2.2, 1.5, 2.2),
+      new THREE.MeshStandardMaterial({ color: 0xc9a56a, roughness: 1 })
     );
-    tent.position.set(3.4, 0.9, -1);
-    tent.rotation.y = Math.PI / 4;
+    tent.position.set(3.6, 0.75, -1.4);
+    tent.rotation.y = 0.5;
     this.scene.add(tent);
-
-    /* bintang & kunang-kunang */
-    const sg = new THREE.BufferGeometry();
-    const sp = new Float32Array(500 * 3);
-    for (let i = 0; i < 500; i++) {
-      const a = rr() * Math.PI * 2, u = rr();
-      sp[i * 3] = Math.cos(a) * 90 * (1 - u * 0.2);
-      sp[i * 3 + 1] = 12 + u * 60;
-      sp[i * 3 + 2] = -Math.abs(Math.sin(a)) * 90 - 8;
-    }
-    sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-    this.scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false, fog: false })));
-    const moon = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 16), new THREE.MeshBasicMaterial({ color: 0xeef2ff, fog: false }));
-    moon.position.set(22, 26, -70);
-    this.scene.add(moon);
-
-    this.flies = [];
-    const fg = new THREE.BufferGeometry();
-    this.fp = new Float32Array(60 * 3);
-    for (let i = 0; i < 60; i++) {
-      this.fp[i * 3] = (rr() - 0.5) * 14;
-      this.fp[i * 3 + 1] = rr() * 3;
-      this.fp[i * 3 + 2] = (rr() - 0.5) * 8 - 1;
-      this.flies.push(rr() * 10);
-    }
-    fg.setAttribute('position', new THREE.BufferAttribute(this.fp, 3));
-    this.flyPts = new THREE.Points(fg, new THREE.PointsMaterial({ color: 0xcfd6b0, size: 5, sizeAttenuation: false }));
-    this.scene.add(this.flyPts);
+    const tentTop = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 0.7, 1.6),
+      new THREE.MeshStandardMaterial({ color: 0xb08850, roughness: 1 })
+    );
+    tentTop.position.set(3.6, 1.8, -1.4);
+    tentTop.rotation.y = 0.5;
+    this.scene.add(tentTop);
 
     this.char = null;
     this.crowd = [];
@@ -127,8 +109,55 @@ export class Lobby {
     this.editYaw = 0;
     this.drag = false;
     this.t = 0;
+    /* interaksi lobi: geser memutar karakter, ketuk = pilih emote */
+    this.yaw = 0.35;
+    this.enabled = false;
+    this.emote = null;
+    this.onTapChar = null;
+    this._ptr = null;
     this.setLook(lookFromSkin(SKINS[0]));
   }
+
+  /* pasang kendali sentuh pada kanvas WebGL (dipanggil sekali) */
+  bindInput(el) {
+    el.addEventListener('pointerdown', (e) => {
+      if (!this.enabled || this.mode !== 'idle') return;
+      this._ptr = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: 0 };
+      this.drag = true;
+      try { el.setPointerCapture(e.pointerId); } catch (er) { /* abaikan */ }
+    });
+    el.addEventListener('pointermove', (e) => {
+      const p = this._ptr;
+      if (!p || p.id !== e.pointerId) return;
+      const dx = e.clientX - p.x;
+      p.x = e.clientX; p.y = e.clientY;
+      p.moved += Math.abs(dx) + Math.abs(e.movementY || 0);
+      this.yaw += dx * 0.012;
+    });
+    const end = (e) => {
+      const p = this._ptr;
+      if (!p || p.id !== e.pointerId) return;
+      this._ptr = null;
+      this.drag = false;
+      const dist = Math.hypot(e.clientX - p.sx, e.clientY - p.sy);
+      if (dist < 10 && performance.now() - p.t < 450 && this.hitChar(e.clientX, e.clientY) && this.onTapChar) this.onTapChar();
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+  }
+
+  /* apakah titik layar mengenai karakter di tengah */
+  hitChar(cx, cy) {
+    if (!this.char) return false;
+    const rc = new THREE.Raycaster();
+    rc.setFromCamera(new THREE.Vector2((cx / innerWidth) * 2 - 1, -(cy / innerHeight) * 2 + 1), this.cam);
+    const box = new THREE.Box3().setFromObject(this.char);
+    box.expandByScalar(0.25);
+    return rc.ray.intersectsBox(box);
+  }
+
+  playEmote(id) { this.emote = { id, t: 0 }; }
+  stopEmote() { this.emote = null; if (this.char) resetPose(this.char); }
 
   setLook(d) {
     if (this.char) this.scene.remove(this.char);
@@ -210,6 +239,7 @@ export class Lobby {
   update(dt) {
     this.t += dt;
     const c = this.char;
+    for (const cl of this.clouds) { cl.position.x += dt * 0.8; if (cl.position.x > 70) cl.position.x = -70; }
     if (this.mode === 'edit') {
       if (!this.drag) this.editYaw += dt * 0.35;
       c.rotation.y = this.editYaw;
@@ -221,18 +251,13 @@ export class Lobby {
         idlePose(k.g, this.t + k.style, k.style);
       }
     } else {
-      c.rotation.y = Math.sin(this.t * 0.6) * 0.45;
-      c.position.y = Math.sin(this.t * 2) * 0.015;
-      idlePose(c, this.t, 0);
+      c.rotation.y = this.yaw;
+      c.position.y = Math.sin(this.t * 2) * 0.01;
+      if (this.emote) {
+        this.emote.t += dt;
+        if (!applyEmote(c, this.emote.id, this.emote.t)) { this.emote = null; resetPose(c); }
+      } else idlePose(c, this.t, 0);
     }
-    const f = 0.85 + Math.random() * 0.3;
-    this.flame.scale.set(f, f * (0.9 + Math.random() * 0.3), f);
-    this.fireLight.intensity = 2.2 + Math.random() * 0.8;
-    for (let i = 0; i < 60; i++) {
-      this.fp[i * 3 + 1] += Math.sin(this.t * 0.8 + this.flies[i]) * dt * 0.3;
-      this.fp[i * 3] += Math.cos(this.t * 0.5 + this.flies[i]) * dt * 0.3;
-    }
-    this.flyPts.geometry.attributes.position.needsUpdate = true;
   }
 
   render(r) {

@@ -6,7 +6,7 @@ import { MAPS, loadMaps } from './maps.js';
 import { Net, Browse, MAXP, OW_SEED, WORLD_MAX, WAR_SEED, DRIG_SEED } from './net.js';
 import { listWorlds, createWorld, deleteWorld, MAX_WORLDS } from './worlds.js';
 import { Audio } from './audio.js';
-import { SKINS, drawPreview, lookFromSkin, normLook, packLook } from './chars.js';
+import { SKINS, EMOTES, drawPreview, lookFromSkin, normLook, packLook } from './chars.js';
 import { openCharEditor } from './charedit.js';
 import { initTextures } from './textures.js';
 import { sleep } from './util.js';
@@ -63,7 +63,7 @@ let net = null;
 let inRoom = false;
 let mode = 'none';
 
-const SCREENS = ['sLoad', 'sIntro', 'sLobby', 'sWorlds', 'sNewWorld', 'sOnline', 'sCreate', 'sFind', 'sRoom', 'sChar', 'hud'];
+const SCREENS = ['sSplash', 'sLoad', 'sIntro', 'sLobby', 'sProfile', 'sWorlds', 'sNewWorld', 'sOnline', 'sCreate', 'sFind', 'sRoom', 'sChar', 'hud'];
 let browse = null;
 function stopBrowse() {
   if (browse) { browse.close(); browse = null; }
@@ -345,48 +345,70 @@ async function runLoading(job) {
   }
 }
 
-/* ================= INTRO ================= */
+/* ================= SPLASH (3 detik, logo G) ================= */
+async function splash() {
+  show('sSplash');
+  await sleep(3000);
+}
+
+/* ================= INTRO & AKUN ================= */
 async function intro() {
   show('sIntro');
   const stop = runCanvas($('introBg'), drawIntro);
-  $('introForm').classList.add('hidden');
-  $('introTap').classList.add('hidden');
-  await sleep(2200);
+  const hideAll = () => { for (const id of ['introForm', 'introConfirm', 'introTap']) $(id).classList.add('hidden'); };
+  hideAll();
+  const needAcc = !account || !account.age || !account.gender;
+  await sleep(needAcc ? 1800 : 1500);
   return new Promise((resolve) => {
     let ready = false;
     const root = $('sIntro');
+    const finish = () => { root.removeEventListener('pointerdown', tap); stop(); resolve(); };
     const tap = (e) => {
       if (!ready) return;
-      if (e.target.closest && e.target.closest('#introForm')) return;
-      root.removeEventListener('pointerdown', tap);
-      stop();
-      resolve();
+      if (e.target.closest && e.target.closest('#introForm, #introConfirm')) return;
+      finish();
     };
     const showTap = () => {
-      $('introForm').classList.add('hidden');
+      hideAll();
       $('helloName').textContent = 'Halo, ' + account.name + '!';
       $('introTap').classList.remove('hidden');
       setTimeout(() => { ready = true; }, 450);
     };
-    if (account) showTap();
-    else {
-      $('introForm').classList.remove('hidden');
-      const make = () => {
-        const n = $('inName').value.trim();
-        if (n.length < 2) {
-          $('inName').style.borderColor = '#ff6a5a';
-          $('inName').placeholder = 'Nama minimal 2 huruf';
-          $('inName').focus();
-          return;
-        }
-        account = { name: n };
+    if (!needAcc) { showTap(); root.addEventListener('pointerdown', tap); return; }
+    /* ---- buat akun: nama, umur, jenis kelamin, konfirmasi ---- */
+    let gender = (account && account.gender) || '';
+    if (account && account.name) $('inName').value = account.name;
+    if (account && account.age) $('inAge').value = account.age;
+    const paintGender = () => {
+      $('gdM').classList.toggle('on', gender === 'L');
+      $('gdF').classList.toggle('on', gender === 'P');
+    };
+    paintGender();
+    $('gdM').onclick = () => { gender = 'L'; paintGender(); };
+    $('gdF').onclick = () => { gender = 'P'; paintGender(); };
+    const bad = (msg, el) => { $('inMsg').textContent = msg; if (el) { el.style.borderColor = '#ff6a5a'; el.focus(); } };
+    $('inName').oninput = () => { $('inName').style.borderColor = ''; $('inMsg').textContent = ''; };
+    $('inAge').oninput = () => { $('inAge').style.borderColor = ''; $('inMsg').textContent = ''; };
+    hideAll();
+    $('introForm').classList.remove('hidden');
+    $('btnMakeAcc').onclick = () => {
+      const n = $('inName').value.trim();
+      const age = parseInt($('inAge').value, 10);
+      if (n.length < 2) return bad('Nama minimal 2 huruf.', $('inName'));
+      if (!(age >= 5 && age <= 99)) return bad('Umur harus 5 sampai 99.', $('inAge'));
+      if (!gender) return bad('Pilih laki-laki atau perempuan.');
+      $('cfName').textContent = n;
+      $('cfAge').textContent = age + ' tahun';
+      $('cfGender').textContent = gender === 'L' ? 'Laki-laki' : 'Perempuan';
+      hideAll();
+      $('introConfirm').classList.remove('hidden');
+      $('btnConfOk').onclick = () => {
+        account = { name: n, age, gender, bio: (account && account.bio) || '' };
         store.set('ps_account', account);
-        showTap();
+        finish();
       };
-      $('btnMakeAcc').onclick = make;
-      $('inName').onkeydown = (e) => { if (e.key === 'Enter') make(); };
-    }
-    root.addEventListener('pointerdown', tap);
+      $('btnConfBack').onclick = () => { hideAll(); $('introForm').classList.remove('hidden'); };
+    };
   });
 }
 
@@ -426,6 +448,20 @@ $('sfxRange').onchange = () => Audio.sfx('pickup');
 $('setClose').onclick = () => $('mSet').classList.remove('show');
 
 /* ================= LOBI ================= */
+let playMode = Object.assign({ mode: 'solo', n: 4 }, store.get('ps_playmode', {}));
+if (!(playMode.n >= 1 && playMode.n <= 10)) playMode.n = 4;
+
+function paintAvatar(cv, look) {
+  const tmp = document.createElement('canvas');
+  tmp.width = tmp.height = 200;
+  drawPreview(tmp, look);
+  const g = cv.getContext('2d');
+  g.clearRect(0, 0, cv.width, cv.height);
+  /* potong bagian kepala & bahu */
+  g.drawImage(tmp, 100 - 40, 6, 80, 80, 0, 0, cv.width, cv.height);
+}
+function modeLabel() { return playMode.mode === 'squad' ? 'Squad · ' + playMode.n + ' orang' : 'Main Solo'; }
+
 function toLobby() {
   mode = 'lobby';
   Audio.music('menu');
@@ -433,11 +469,85 @@ function toLobby() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.setSize(innerWidth, innerHeight);
   $('lbName').textContent = account.name;
-  $('lbChar').textContent = lookName();
+  $('lbChar').textContent = account.name;
+  $('btnMode').textContent = modeLabel();
+  paintAvatar($('lbAvatar'), curLook());
   lobby.setMode('idle');
   lobby.setLook(curLook());
+  lobby.char.visible = true;
+  lobby.enabled = true;
   lobby.resize();
 }
+
+/* ---- profil: karakter di kiri, nama & bio di kanan ---- */
+function openProfile() {
+  lobby.enabled = false;
+  lobby.stopEmote();
+  lobby.char.visible = false;
+  show('sProfile');
+  const cv = $('pfChar');
+  cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+  drawPreview(cv, curLook());
+  $('pfName').textContent = account.name;
+  $('pfMeta').textContent = (account.age ? account.age + ' tahun' : '') + (account.gender ? ' · ' + (account.gender === 'L' ? 'Laki-laki' : 'Perempuan') : '');
+  $('pfBio').value = account.bio || '';
+}
+$('lbProfile').onclick = openProfile;
+$('pfBack').onclick = () => { saveBio(); toLobby(); };
+function saveBio() {
+  account.bio = $('pfBio').value.slice(0, 120);
+  store.set('ps_account', account);
+}
+$('pfSave').onclick = () => { saveBio(); flash('Bio disimpan'); };
+
+/* ---- menu mode: Solo / Squad (1-10) ---- */
+let pendingMode = null;
+function paintModeMenu() {
+  const m = pendingMode;
+  $('mdSolo').classList.toggle('on', m.mode === 'solo');
+  $('mdSquad').classList.toggle('on', m.mode === 'squad');
+  $('squadPick').classList.toggle('hidden', m.mode !== 'squad');
+  $('sqN').textContent = m.n;
+}
+$('btnMode').onclick = () => { pendingMode = Object.assign({}, playMode); paintModeMenu(); $('mMode').classList.add('show'); };
+$('mdSolo').onclick = () => { pendingMode.mode = 'solo'; paintModeMenu(); };
+$('mdSquad').onclick = () => { pendingMode.mode = 'squad'; paintModeMenu(); };
+$('sqMinus').onclick = () => { pendingMode.n = Math.max(1, pendingMode.n - 1); paintModeMenu(); };
+$('sqPlus').onclick = () => { pendingMode.n = Math.min(10, pendingMode.n + 1); paintModeMenu(); };
+$('modeOk').onclick = () => {
+  playMode = pendingMode;
+  store.set('ps_playmode', playMode);
+  $('btnMode').textContent = modeLabel();
+  $('mMode').classList.remove('show');
+};
+
+/* ---- MULAI: lanjut dunia terakhir (atau buat dunia baru) ---- */
+function startPlay() {
+  let wd = listWorlds()[0];
+  if (!wd) {
+    try { wd = createWorld('Pulau ' + account.name); } catch (e) { flash(e.message); return; }
+  }
+  if (playMode.mode === 'squad') {
+    startGame({ online: false, world: wd, host: true, squad: playMode.n });
+  } else {
+    startGame({ online: false, world: wd, host: false });
+  }
+}
+$('btnStart').onclick = startPlay;
+
+/* ---- ketuk karakter di lobi: pilih emote ---- */
+function buildLobbyEmotes() {
+  const g = $('lbEmoteGrid');
+  g.innerHTML = '';
+  for (const e of EMOTES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = ico(e.icon) + '<span>' + e.name + '</span>';
+    b.onclick = () => { lobby.playEmote(e.id); $('mLbEmote').classList.remove('show'); };
+    g.appendChild(b);
+  }
+}
+$('lbEmoteClose').onclick = () => $('mLbEmote').classList.remove('show');
 
 function renderVault() {
   const g = $('vaultGrid');
@@ -470,7 +580,7 @@ function renderVault() {
       store.set('ps_skin', skinId);
       store.set('ps_look', null);
       lobby.setLook(curLook());
-      $('lbChar').textContent = lookName();
+      $('lbChar').textContent = account.name;
       $('roomMe').textContent = account.name;
       renderVault();
     };
@@ -580,10 +690,10 @@ function playWorld(wd) {
   startGame({ online: false, world: wd, host: settings.openWorld !== false });
 }
 
-async function hostWorldInBackground(g, wd) {
+async function hostWorldInBackground(g, wd, maxP) {
   const n = new Net();
   try {
-    await n.host(wd.name, '', myInfo(), { world: true, seed: wd.seed, max: WORLD_MAX });
+    await n.host(maxP ? 'Squad ' + account.name : wd.name, '', myInfo(), { world: true, seed: wd.seed, max: maxP || WORLD_MAX });
   } catch (e) {
     n.close();
     if (game === g) flash('Dunia dimainkan offline (' + (e.message || 'tidak ada internet') + ')');
@@ -842,6 +952,7 @@ function beginOnline(seed, players) {
 /* ================= GAME ================= */
 async function startGame(o) {
   mode = 'none';
+  if (lobby) { lobby.enabled = false; lobby.stopEmote(); }
   const g = new Game(renderer, settings, {
     online: !!o.online,
     net: o.online ? net : null,
@@ -853,6 +964,7 @@ async function startGame(o) {
     moto: !!o.moto,
     map: o.map || null,
     name: account.name,
+    gender: account.gender || 'L',
     skinId,
     look: curLook(),
     openSettings,
@@ -878,7 +990,8 @@ async function startGame(o) {
   g.begin();
   window.__game = g;
   mode = 'game';
-  if (o.world && o.host) hostWorldInBackground(g, o.world);
+  if (o.world && o.host) hostWorldInBackground(g, o.world, o.squad || 0);
+  if (o.squad) flash('Squad dibuka (maks ' + o.squad + ' orang). Teman gabung lewat Online > Room Global');
 }
 
 function exitGame() {
@@ -930,14 +1043,17 @@ document.addEventListener('visibilitychange', () => {
 
 /* ================= BOOT ================= */
 async function boot() {
-  Audio.music('menu');
   requestAnimationFrame(frame);
+  await splash();
+  Audio.music('menu');
   await runLoading(async (p) => {
     p(8, 'Memuat tekstur...');
     initTextures();
     await sleep(700);
     p(35, 'Menyiapkan lobi...');
     lobby = new Lobby();
+    lobby.bindInput($('gl'));
+    lobby.onTapChar = () => { buildLobbyEmotes(); $('mLbEmote').classList.add('show'); };
     lobby.setLook(curLook());
     await sleep(700);
     p(65, 'Membangun dunia survival...');

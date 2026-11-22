@@ -4,7 +4,7 @@ import { Audio } from './audio.js';
 import { ico, costIcons, setIcon } from './icons.js';
 import { ITEMS, ICON, STACK, TOOLS, EQUIP, TOOL, CRAFT, CRAFT_CATS, CAP_BAG, CAP_CART, costText } from './items.js';
 import { BUILD } from './pieces.js';
-import { MINE_Y, CAVE, caveLocal, caveWorld } from './mine.js';
+import { MINE_Y, CAVE, PORTAL, caveLocal, caveWorld } from './mine.js';
 import { digTerrain } from './world.js';
 import { Voice } from './voice.js';
 import { buildHeld } from './held.js';
@@ -54,12 +54,10 @@ export const actionsMixin = {
       const g = new THREE.Group();
       g.position.set(0.3 * side, -0.34, -0.5);
       g.rotation.set(0.12, -side * 0.18, 0);
-      const cz = (r, l, m, z) => { const x = new THREE.Mesh(new THREE.CapsuleGeometry(r, l, 4, 10), m); x.rotation.x = Math.PI / 2; x.position.z = z; return x; };
-      const a = cz(0.058, 0.34, sleeve, 0.22);
-      const b = cz(0.045, 0.2, skin, -0.1);
-      const h = new THREE.Mesh(new THREE.SphereGeometry(0.062, 14, 10), skin);
-      h.scale.set(1, 0.8, 1.15);
-      h.position.z = -0.26;
+      const bz = (w, hh, d, m, z) => { const x = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), m); x.position.z = z; return x; };
+      const a = bz(0.13, 0.13, 0.44, sleeve, 0.22);
+      const b = bz(0.1, 0.1, 0.28, skin, -0.1);
+      const h = bz(0.13, 0.11, 0.15, skin, -0.26);
       g.add(a, b, h);
       this.cam.add(g);
       g.userData.base = g.position.clone();
@@ -939,44 +937,44 @@ export const actionsMixin = {
     requestAnimationFrame(() => requestAnimationFrame(() => { el.style.transition = 'opacity .45s'; el.style.opacity = '0'; }));
   },
 
-  /* ujung terowongan permukaan -> lorong tambang (tanpa portal) */
-  enterCave(i, loc) {
-    const c = this.caves[i], p = this.p, m = this.mine;
+  /* masuk portal goa -> lorong tambang */
+  enterCave(i) {
+    const p = this.p, m = this.mine;
     this.fishCancel();
     if (this.hitch) this.setHitch(false);
     this.blink();
     this.setCave(true, i);
     p.on = null;
-    p.x = m.seamX + 0.7 + Math.max(0, loc.u - CAVE.US);
-    p.z = m.start.z + loc.v;
+    p.x = m.spawn.x; p.z = m.spawn.z;
     p.y = MINE_Y; p.vy = 0;
-    p.yaw += -Math.PI / 2 - c.ang;
+    p.yaw = m.spawn.yaw;
     this.toastOnce('mine', this.eq === 'obor' ? 'Tambang gelap. Cari bijih!' : 'Gelap! Buat Obor (Tas, tab Cahaya) & pegang di hotbar', 20000);
   },
 
+  /* keluar lewat portal di tambang -> kembali ke gerbang di permukaan */
   exitCave() {
     if (!this.inCave) return;
-    const c = this.caves[this.caveIdx] || this.caves[0], p = this.p, m = this.mine;
+    const c = this.caves[this.caveIdx] || this.caves[0], p = this.p;
     this.blink();
-    const u = CAVE.US - 0.7 - Math.max(0, m.seamX - p.x), v = p.z - m.start.z;
     this.setCave(false, -1);
-    const [wx, wz] = caveWorld(c, u, v);
-    p.x = wx; p.z = wz; p.y = c.fm; p.vy = 0;
-    p.yaw += c.ang + Math.PI / 2;
+    const [wx, wz] = caveWorld(c, -2.6, 0);
+    p.x = wx; p.z = wz; p.y = this.hf.sample(wx, wz); p.vy = 0;
+    p.yaw = c.ang + Math.PI;
+    p.pitch = 0;
   },
 
   checkCave() {
-    if (this.dead || !this.caves.length) return;
+    if (this.dead || !this.caves.length || this.busy) return;
     const p = this.p;
     if (!this.inCave) {
       if (p.on) return;
       for (let i = 0; i < this.caves.length; i++) {
         const c = this.caves[i];
-        if (Math.hypot(p.x - c.x, p.z - c.z) > 24) continue;
+        if (Math.hypot(p.x - c.x, p.z - c.z) > 6) continue;
         const l = caveLocal(c, p.x, p.z);
-        if (l.u >= CAVE.US && Math.abs(l.v) < CAVE.HW + 0.3 && p.y < c.fm + CAVE.H) { this.enterCave(i, l); return; }
+        if (Math.abs(l.u) < 0.55 && Math.abs(l.v) < PORTAL.PX - PORTAL.PW && p.y < (c.py ?? c.y) + PORTAL.H) { this.enterCave(i); return; }
       }
-    } else if (p.x < this.mine.seamX && Math.abs(p.z - this.mine.start.z) < 2.4) this.exitCave();
+    } else if (p.x < this.mine.seamX - 0.9 && Math.abs(p.z - this.mine.start.z) < 1.5) this.exitCave();
   },
 
   /* ================= CHAT & MIC ================= */

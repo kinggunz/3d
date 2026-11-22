@@ -5,12 +5,14 @@ import { Animals } from './animals.js';
 import { buildChar, SKINS, normLook, lookFromSkin, packLook, unpackLook, resetPose, applyEmote, EMOTE_BY_ID, poseChar, clearPose, setHeldTP, attackKind } from './chars.js';
 import { buildHeld } from './held.js';
 import { introMixin } from './intro.js';
+import { weatherMixin } from './weather.js';
+import { Airport } from './airport.js';
 import { emoteMixin } from './emotes.js';
 import { Audio } from './audio.js';
 import { ITEMS, ICON, STACK, CAP_BAG, CAP_CART, CRAFT, costText } from './items.js';
 import { BUILD, EDGE_KINDS, PIECE_LIGHT, pieceCols, createPiece, makeFire, makeGhostModel } from './pieces.js';
 import { Vessel, vesselMixin } from './vessel.js';
-import { Mine, MINE_Y, findCaves, makeCave, setupCave, caveHole, caveLocal, CAVE } from './mine.js';
+import { Mine, MINE_Y, findCaves, makeCave, setupCave, caveHole, caveLocal, caveWorld, CAVE, PORTAL } from './mine.js';
 import { HudEditor } from './hudedit.js';
 import { actionsMixin } from './actions.js';
 import { warMixin, ARMOR } from './war.js';
@@ -166,12 +168,12 @@ export class Game {
       }],
       ['Menumbuhkan rumput...', () => {
         this.terrain = makeTerrain(this.hf, this.seed);
-        cutHoles(this.terrain, this.caves.map(caveHole));
         this.scene.add(this.terrain);
       }],
       ['Mengisi lautan...', () => { this.water = makeWater(); this.scene.add(this.water); }],
       ['Menerbitkan matahari...', () => { this.sky = makeSky(this.scene); this.pieceGroup = new THREE.Group(); this.scene.add(this.pieceGroup); }],
       ['Menanam hutan...', () => { this.nature = makeNature(this.hf, this.seed, this.scene); }],
+      ['Mengatur cuaca...', () => { this.initWeather(); }],
       ['Memanggil hewan...', () => { this.animals = new Animals(this.hf, this.seed, this.scene, ultra); }],
       ['Menggali tambang...', () => { this.makeCaves(); }],
       ['Menyiapkan tangan...', () => { this.makeHands(); this.makeLights(); this.makeChips(); }],
@@ -197,13 +199,16 @@ export class Game {
       this.scene.add(m);
       this.caveMeshes.push(m);
       for (const f of m.userData.flames) this.tunFlames.push(f);
+      this.portalSpin = this.portalSpin || [];
+      if (m.userData.spin) this.portalSpin.push(m.userData.spin);
       /* bersihkan pohon/batu di area lubang goa */
-      for (let u = -4; u <= c.uEnd + 4; u += 3) {
+      for (let u = -5; u <= 6; u += 3) {
         const x = c.x - c.ox * u, z = c.z - c.oz * u;
         for (const n of this.nature.near(x, z, 8)) if (n.alive && Math.hypot(n.x - x, n.z - z) < 7) this.nature.kill(n);
       }
     }
     this.mine = new Mine(this.seed, this.scene);
+    if (this.mine.exitSpin) { this.portalSpin = this.portalSpin || []; this.portalSpin.push(this.mine.exitSpin); }
   }
 
   restore() {
@@ -336,7 +341,20 @@ export class Game {
       this.initVoice();
     }
     if (this.persist) this.save();
-    this.startIntro();
+    if (this.saved && this.saved.wk) this.buildStaticWreck(this.saved.wk);
+    if (this.introEligible()) this.startAirport(); else this.startIntro();
+  }
+
+  /* adegan bandara lalu adegan pesawat */
+  startAirport() {
+    this.busy = true; this.act = false;
+    $('hud').style.visibility = 'hidden';
+    Audio.music('none'); Audio.ambient(false);
+    this.airport = new Airport(this.r, this.myLook, this.o.name, this.o.gender, () => {
+      this.airport = null;
+      this.busy = false;
+      if (this.running) this.startIntro();
+    });
   }
 
   /* dunia sendiri: jaringan baru tersambung di belakang layar (pemain lain bisa masuk) */
@@ -436,62 +454,32 @@ export class Game {
   world() { return this.inCave ? this.mine : this.nature; }
   terr(x, z) { return this.inCave ? MINE_Y : this.hf.sample(x, z); }
 
-  /* lantai terowongan goa / puncak blok batu di titik ini (atau null bila tidak ada) */
-  tunFloor(px, pz, py) {
-    if (this.inCave) return null;
-    for (const c of this.caves) {
-      const dx = px - c.x, dz = pz - c.z;
-      if (dx * dx + dz * dz > 900) continue;
-      const u = -(dx * c.ox + dz * c.oz), v = dx * c.oz - dz * c.ox, av = Math.abs(v);
-      if (u >= CAVE.U0 && u <= CAVE.US + 1) {
-        if (av < CAVE.HW && py < c.fm + CAVE.H + 0.3) return c.fm;
-        if (u <= c.uEnd && av < CAVE.HWP && py >= c.roofTop - 0.6) return c.roofTop + 0.06;
-      }
-    }
-    return null;
-  }
+  /* goa kini berupa portal: tidak ada lantai/atap terowongan */
+  tunFloor() { return null; }
 
-  /* dinding & blok batu goa */
+  /* tiang & gerbang portal bersifat padat (tidak bisa ditembus) */
   tunPush(px, pz, py, R) {
     if (this.inCave) return [px, pz];
     for (const c of this.caves) {
       const dx = px - c.x, dz = pz - c.z;
-      if (dx * dx + dz * dz > 900) continue;
-      let u = -(dx * c.ox + dz * c.oz), v = dx * c.oz - dz * c.ox;
-      if (u < CAVE.U0 - R || u > CAVE.US + 1.2) continue;
-      if (py >= c.roofTop - 0.6) continue;
-      const av = Math.abs(v), sg = v < 0 ? -1 : 1;
-      const inTun = py < c.fm + CAVE.H + 0.3;
-      let nu = u, nv = v, hit = false;
-      if (u >= CAVE.U0 && u <= c.uEnd && av < CAVE.HWP + R) {
-        if (av > CAVE.HW - R) {
-          /* di dalam blok: masuk dari lorong atau dari luar? */
-          if (u > CAVE.U0 + 0.35 && av < CAVE.HW + 0.45 && inTun) { nv = sg * (CAVE.HW - R); hit = true; } else {
-            const dFront = u - (CAVE.U0 - R), dSide = CAVE.HWP + R - av, dBack = c.uEnd + R - u;
-            const m = Math.min(dFront, dSide, dBack);
-            if (m === dFront) nu = CAVE.U0 - R; else if (m === dSide) nv = sg * (CAVE.HWP + R); else nu = c.uEnd + R;
-            hit = true;
-          }
+      if (dx * dx + dz * dz > 64) continue;
+      if (py > (c.py ?? c.y) + PORTAL.H + 1.2) continue;
+      const l = caveLocal(c, px, pz);
+      let u = l.u, v = l.v, hit = false;
+      for (const sg of [-1, 1]) {
+        const cv = sg * PORTAL.PX, hu = PORTAL.PH + R, hv = PORTAL.PW + R;
+        if (Math.abs(u) < hu && Math.abs(v - cv) < hv) {
+          const pu = hu - Math.abs(u), pv = hv - Math.abs(v - cv);
+          if (pu < pv) u = (u < 0 ? -1 : 1) * hu; else v = cv + (v - cv < 0 ? -1 : (v - cv > 0 ? 1 : sg)) * hv;
+          hit = true;
         }
-      } else if (u > c.uEnd && u <= CAVE.US + 1.2 && av < CAVE.HW + 0.45 && inTun && av > CAVE.HW - R) { nv = sg * (CAVE.HW - R); hit = true; }
-      if (hit) {
-        px = c.x - c.ox * nu + c.oz * nv; pz = c.z - c.oz * nu - c.ox * nv;
       }
+      if (hit) [px, pz] = caveWorld(c, u, v);
     }
     return [px, pz];
   }
 
-  /* langit-langit terowongan di atas titik ini */
-  tunRoof(px, pz, py) {
-    if (this.inCave) return null;
-    for (const c of this.caves) {
-      const dx = px - c.x, dz = pz - c.z;
-      if (dx * dx + dz * dz > 900) continue;
-      const u = -(dx * c.ox + dz * c.oz), v = dx * c.oz - dz * c.ox;
-      if (u >= CAVE.U0 && u <= CAVE.US + 1 && Math.abs(v) < CAVE.HW + 0.3 && py < c.fm + CAVE.H + 0.2) return c.fm + CAVE.H;
-    }
-    return null;
-  }
+  tunRoof() { return null; }
   activeBoxes() { return this.inCave ? this.mine.boxes : this.boxes; }
 
   /* ================= TARGET (label di tengah layar) ================= */
@@ -1418,6 +1406,7 @@ export class Game {
       vessels: this.vessels.map((v) => ({ id: v.id, px: v.px, pz: v.pz, x: v.x, z: v.z, yaw: v.yaw, h: v.hOff })),
       cart: this.cart ? { x: this.cart.x, z: this.cart.z, yaw: this.cart.yaw, inv: this.cart.inv } : null,
       cv: this.inCave ? this.caveIdx : -1,
+      wk: this.wreckSite || null,
       dead: this.nature.deadList(),
       digs: this.digs,
       stats: this.stats,
@@ -1436,6 +1425,7 @@ export class Game {
     if (!this.running) return;
     const frozen = this.paused && !this.mp();
     if (this.dead) this.deadT += dt;
+    if (this.airport) this.airport.update(dt);
     if (this.intro) this.introPre(dt);
     if (!frozen) {
       this.t += dt / DAYLEN;
@@ -1461,6 +1451,7 @@ export class Game {
     }
     this.updateAnim(dt);
     this.sky.update(this.t, this.cam.position, this.cam.position, dt);
+    this.weatherUpdate(dt);
     this.water.update(dt, performance.now() / 1000);
     if (this.war) {
       /* istana: selalu terang, siang maupun malam */
@@ -1481,6 +1472,7 @@ export class Game {
       this.scene.fog.near = lerp(this.scene.fog.near, 1.5, dk);
       this.scene.fog.far = lerp(this.scene.fog.far, this.q && this.q.adapt ? 22 : 30, dk);
     }
+    if (this.portalSpin) { const pt = performance.now() / 1000; for (const f of this.portalSpin) f(pt); }
     if (this.tunFlames) for (const f of this.tunFlames) { const sc = 0.85 + Math.random() * 0.35; f.scale.set(sc, sc * (0.9 + Math.random() * 0.3), sc); }
     if (this.intro) this.introPost(dt);
     if (this.wreck) this.wreckUpdate(dt);
@@ -1840,6 +1832,7 @@ export class Game {
   }
 
   render() {
+    if (this.airport) { this.airport.render(); return; }
     if (this.modifOpen && this.modif) this.modif.render(this.r);
     else this.r.render(this.scene, this.cam);
   }
@@ -1850,6 +1843,8 @@ export class Game {
     for (const id of ['warHud', 'mShop', 'motoHud', 'sModif']) { const e = document.getElementById(id); if (e) e.remove(); }
     document.body.classList.remove('cineOn', 'modifOn');
     if (this.msound) { this.msound.stop(); this.msound = null; }
+    this.disposeWeather();
+    if (this.airport) { const a = this.airport; this.airport = null; a.onDone = null; a.finish(); }
     if (this.modif) this.modif.close();
     { const hd = document.getElementById('hud'); if (hd) hd.classList.remove('moto'); }
     this.scene.environment = null;
@@ -1878,4 +1873,4 @@ export class Game {
   }
 }
 
-Object.assign(Game.prototype, introMixin, vesselMixin, actionsMixin, emoteMixin, warMixin, botMixin, motoMixin);
+Object.assign(Game.prototype, introMixin, weatherMixin, vesselMixin, actionsMixin, emoteMixin, warMixin, botMixin, motoMixin);

@@ -99,145 +99,120 @@ function boxUV(geo, w, h, d, k) {
   return geo;
 }
 
+/* ---------- gerbang portal bergaya kotak (dipakai di permukaan & di dalam tambang) ---------- */
+export const PORTAL = { PX: 1.75, PH: 0.5, PW: 0.45, H: 3.6 };
+export function buildPortalGate(label, rockMat, woodMat) {
+  const gate = new THREE.Group();
+  const rock = rockMat || new THREE.MeshStandardMaterial({ color: 0x7d7a74, roughness: 1 });
+  const bx = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; gate.add(o); return o; };
+  const { PX, PH, PW, H } = PORTAL;
+  for (const sg of [-1, 1]) {
+    bx(PW * 2, H, PH * 2, rock, sg * PX, H / 2, 0);
+    bx(PW * 2 + 0.3, 0.35, PH * 2 + 0.3, rock, sg * PX, 0.18, 0);
+    bx(PW * 2 + 0.3, 0.35, PH * 2 + 0.3, rock, sg * PX, H - 0.18, 0);
+  }
+  bx(PX * 2 + PW * 2 + 0.6, 0.7, PH * 2 + 0.2, rock, 0, H + 0.3, 0);
+  bx(PX * 2 + PW * 2, 0.4, PH * 2 + 0.4, rock, 0, H + 0.85, 0);
+  /* kristal hias di tiang */
+  const cry = new THREE.MeshBasicMaterial({ color: 0xc89bff });
+  for (const sg of [-1, 1]) for (let k = 0; k < 3; k++) bx(0.16, 0.16, 0.16, cry, sg * (PX - PW - 0.04), 0.8 + k * 1.0, 0.0 + PH + 0.04);
+  /* pusaran kotak: beberapa persegi bertumpuk berputar pelan, bercahaya */
+  const swirl = new THREE.Group();
+  swirl.position.set(0, H / 2, 0);
+  gate.add(swirl);
+  const mats = [0x5a2dff, 0x8a4dff, 0xb77bff, 0xe3c8ff].map((c, i) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.42 - i * 0.05, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  const sq = [];
+  const iw = (PX - PW) * 2 - 0.1, ih = H - 0.1;
+  for (let i = 0; i < 4; i++) {
+    const k = 1 - i * 0.22;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(iw * k, ih * k * (iw / ih > 0.9 ? 1 : 1)), mats[i]);
+    m.position.z = 0.01 * i;
+    swirl.add(m);
+    sq.push(m);
+  }
+  const core = new THREE.Mesh(new THREE.PlaneGeometry(iw, ih), new THREE.MeshBasicMaterial({ color: 0x1a0b4d, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false, fog: false }));
+  core.position.z = -0.02;
+  swirl.add(core);
+  /* papan nama */
+  if (label) {
+    const cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 64;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = '#4a3320'; cx.fillRect(0, 0, 256, 64);
+    cx.strokeStyle = '#241a10'; cx.lineWidth = 6; cx.strokeRect(3, 3, 250, 58);
+    cx.fillStyle = '#f4efe3'; cx.font = 'bold 34px sans-serif'; cx.textAlign = 'center';
+    cx.fillText(label, 128, 44);
+    const tex = new THREE.CanvasTexture(cv);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.55), new THREE.MeshBasicMaterial({ map: tex }));
+    sign.position.set(0, H + 0.3, PH + 0.02);
+    gate.add(sign);
+    const sign2 = sign.clone();
+    sign2.position.z = -(PH + 0.02);
+    sign2.rotation.y = Math.PI;
+    gate.add(sign2);
+  }
+  gate.userData.spin = (t) => {
+    sq.forEach((m, i) => {
+      m.rotation.z = Math.sin(t * (0.6 + i * 0.35) + i) * 0.25 * (i % 2 ? 1 : -1);
+      m.material.opacity = (0.4 - i * 0.05) * (0.8 + 0.2 * Math.sin(t * 3 + i * 1.7));
+      const sc = 1 + Math.sin(t * 1.6 + i) * 0.04;
+      m.scale.set(sc, sc, 1);
+    });
+  };
+  return gate;
+}
+
+/* ================= PORTAL GOA di dunia luar =================
+   Goa sekarang berupa gerbang batu berkotak dengan portal bercahaya. Melangkah masuk ke
+   portal membawa pemain ke tambang bawah tanah; di tambang ada portal untuk keluar.        */
 export function makeCave(c, hf) {
-  const { U0, US, HW, H, HWP, TOP } = CAVE;
   const rnd = mulberry32(((c.x * 73856093) ^ (c.z * 19349663)) >>> 0);
   const g = new THREE.Group();
   const rock = new THREE.MeshStandardMaterial({ map: T.rock, roughness: 1 });
   const stone = new THREE.MeshStandardMaterial({ map: T.stone, roughness: 1 });
-  const floorM = new THREE.MeshStandardMaterial({ map: T.floor, roughness: 1 });
-  const wood = new THREE.MeshStandardMaterial({ map: T.wood, roughness: 0.95 });
-  const dark = new THREE.MeshBasicMaterial({ color: 0x020203 });
+  const y0 = hf.sample(c.x, c.z);
+  c.py = y0;
   const loc = new THREE.Group();
-  loc.position.set(c.x, 0, c.z);
+  loc.position.set(c.x, y0, c.z);
   loc.rotation.y = c.ang;
   g.add(loc);
-  /* balok di koordinat lokal: v (kanan), y (tinggi dunia), u (masuk) -> z = -u */
-  const rbox = (mat, w, h, d, v, y, u, uvk = 0.3) => {
-    const m = new THREE.Mesh(boxUV(new THREE.BoxGeometry(w, h, d), w, h, d, uvk), mat);
-    m.position.set(v, y, -u);
-    m.castShadow = true;
-    m.receiveShadow = true;
-    loc.add(m);
-    return m;
-  };
-  const fm = c.fm, top = c.roofTop, baseY = fm - 3;
-  const uMid = (U0 + c.uEnd) / 2, lenB = c.uEnd - U0;
-  /* lantai terowongan (menjorok sedikit ke luar) */
-  const fl = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2, US + 1.5 - U0 + 1.2), floorM);
-  fl.rotation.x = -Math.PI / 2;
-  fl.position.set(0, fm + 0.02, -((U0 - 1.2 + US + 1.5) / 2));
-  fl.receiveShadow = true;
-  const fuv = fl.geometry.attributes.uv;
-  for (let i = 0; i < fuv.count; i++) fuv.setXY(i, fuv.getX(i) * 2, fuv.getY(i) * ((US + 2.7 - U0) / 2));
-  loc.add(fl);
-  /* bagian depan: tiang batu kiri/kanan + balok di atas lubang (menjadi blok batu di atas tanah) */
-  for (const sg of [-1, 1]) rbox(rock, HWP - HW, top + 0.06 - baseY, lenB, sg * (HW + HWP) / 2, (top + 0.06 + baseY) / 2, uMid);
-  rbox(rock, HW * 2, top + 0.06 - (fm + H), lenB, 0, (top + 0.06 + fm + H) / 2, uMid);
-  /* bagian dalam bukit: dinding + atap saja */
-  const u2 = c.uEnd, u3 = US + 1.5, len2 = u3 - u2, mid2 = (u2 + u3) / 2;
-  for (const sg of [-1, 1]) rbox(rock, 1.2, H + TOP + 3, len2, sg * (HW + 0.6), (fm + H + TOP + baseY) / 2, mid2);
-  rbox(rock, HW * 2 + 2.4, TOP, len2, 0, fm + H + TOP / 2, mid2);
-  /* tutup ujung (gelap) */
-  const cap = new THREE.Mesh(new THREE.BoxGeometry(HW * 2 + 2.4, H + TOP + 1, 0.4), dark);
-  cap.position.set(0, fm + (H + TOP) / 2, -(u3 + 0.2));
-  loc.add(cap);
-  /* bingkai kayu di mulut goa */
-  const frame = (w, h, d, v, y, u) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wood); m.position.set(v, y, -u); m.castShadow = true; loc.add(m); return m; };
-  for (const sg of [-1, 1]) frame(0.3, H, 0.3, sg * (HW - 0.15), fm + H / 2, U0 - 0.2);
-  frame(HW * 2, 0.3, 0.34, 0, fm + H - 0.12, U0 - 0.2);
-  /* papan nama */
-  const cv = document.createElement('canvas');
-  cv.width = 256; cv.height = 64;
-  const cx = cv.getContext('2d');
-  cx.fillStyle = '#5a3a1c'; cx.fillRect(0, 0, 256, 64);
-  cx.strokeStyle = '#2a1a0c'; cx.lineWidth = 4; cx.strokeRect(2, 2, 252, 60);
-  cx.fillStyle = '#f4efe3'; cx.font = 'bold 34px sans-serif'; cx.textAlign = 'center';
-  cx.fillText('TAMBANG', 128, 44);
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.42), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
-  sign.position.set(0, fm + H + 0.2, -(U0 - 0.04));
-  sign.rotation.y = Math.PI;
-  loc.add(sign);
-  /* bongkahan batu menutupi tepi blok supaya terlihat alami */
-  const dod = new THREE.DodecahedronGeometry(1, 0);
-  const nB = 9;
-  for (let i = 0; i < nB; i++) {
+  /* lantai batu kotak di bawah gerbang */
+  const pad = new THREE.Mesh(new THREE.BoxGeometry(7.2, 1.6, 6.4), stone);
+  pad.position.set(0, -0.62, -0.4);
+  pad.receiveShadow = true;
+  loc.add(pad);
+  const gate = buildPortalGate('TAMBANG', rock);
+  loc.add(gate);
+  /* balok batu di sekitar sebagai hiasan */
+  for (let i = 0; i < 6; i++) {
+    const sc = 0.7 + rnd() * 0.9;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(sc, sc * 0.7, sc), i % 2 ? rock : stone);
     const side = i % 2 ? 1 : -1;
-    const sc = 0.9 + rnd() * 1.3;
-    const m = new THREE.Mesh(dod, i % 3 === 0 ? stone : rock);
-    const uu = U0 - 0.3 + rnd() * (lenB + 0.6);
-    const vv = side * (HWP - 0.2 + rnd() * 0.5);
-    m.position.set(vv, Math.max(hf.sample(...caveWorld(c, uu, vv)), fm) + sc * 0.35, -uu);
-    m.scale.set(sc * 1.15, sc * 0.8, sc);
-    m.rotation.set(rnd() * 3, rnd() * 6, rnd() * 3);
+    m.position.set(side * (3 + rnd() * 1.5), sc * 0.25, -1.5 - rnd() * 2.2);
+    m.rotation.y = rnd() * 3;
     m.castShadow = true; m.receiveShadow = true;
     loc.add(m);
   }
-  for (let i = 0; i < 4; i++) {
-    const sc = 1.0 + rnd() * 0.9;
-    const m = new THREE.Mesh(dod, rock);
-    const uu = U0 + 0.8 + rnd() * Math.max(1, lenB - 1.6), vv = (rnd() - 0.5) * (HW * 2);
-    m.position.set(vv, top + sc * 0.12, -uu);
-    m.scale.set(sc * 1.1, sc * 0.55, sc);
-    m.rotation.set(rnd() * 3, rnd() * 6, rnd() * 3);
-    m.castShadow = true;
-    loc.add(m);
-  }
-  /* tanah berbatu di sekitar lubang: menutup bagian mesh daratan yang dipotong */
-  const E = { u0: U0 - 0.2 - 3.4, u1: c.uEnd + 0.2 + 3.4, hw: HW + 0.6 + 3.4 };
-  const cell = 1;
-  const nu = Math.ceil((E.u1 - E.u0) / cell), nv = Math.ceil((E.hw * 2) / cell);
-  const pos = [], col = [], uvs = [], idx = [];
-  const rc = new THREE.Color(), gc = new THREE.Color(0.3, 0.4, 0.22);
-  for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) {
-    const uu = E.u0 + i * cell, vv = -E.hw + j * cell;
-    const [wx, wz] = caveWorld(c, uu, vv);
-    pos.push(wx, hf.sample(wx, wz) + 0.12, wz);
-    const edge = Math.min(1, Math.min(i, nu - i, j, nv - j) / 2.5);
-    const n = 0.8 + rnd() * 0.3;
-    rc.setRGB(0.46 * n, 0.43 * n, 0.4 * n).lerp(gc, 1 - edge);
-    col.push(rc.r, rc.g, rc.b);
-    uvs.push(wx * 0.4, wz * 0.4);
-  }
-  const inside = (uu, vv) => uu >= U0 - 0.01 && uu <= c.uEnd + 0.01 && Math.abs(vv) <= HWP + 0.01;
-  for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) {
-    const uc = E.u0 + (i + 0.5) * cell, vc = -E.hw + (j + 0.5) * cell;
-    if (inside(uc, vc)) continue;
-    const a = j * (nu + 1) + i, b = a + 1, d2 = a + nu + 1, e = d2 + 1;
-    idx.push(a, d2, b, b, d2, e);
-  }
-  const pg = new THREE.BufferGeometry();
-  pg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  pg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  pg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  pg.setIndex(idx);
-  pg.computeVertexNormals();
-  const patch = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ map: T.rock, vertexColors: true, roughness: 1 }));
-  patch.receiveShadow = true;
-  g.add(patch);
-  /* obor di dalam terowongan (sumber cahaya) */
-  const flames = [], lights = [];
-  const torchAt = (uu, vv) => {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 1.4, 6), new THREE.MeshStandardMaterial({ color: 0x6b4a2b }));
-    pole.position.set(vv, fm + 0.7, -uu);
-    const fl2 = new THREE.Group();
-    const f1 = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.38, 6), new THREE.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.92 }));
-    f1.position.y = 0.19;
-    const f2 = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.24, 6), new THREE.MeshBasicMaterial({ color: 0xffd36b }));
+  /* obor kiri-kanan */
+  const flames = [];
+  const torch = (v) => {
+    const pole = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.5, 0.1), new THREE.MeshStandardMaterial({ color: 0x6b4a2b }));
+    pole.position.set(v, 0.75, 1.0);
+    const fl = new THREE.Group();
+    const f1 = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.34, 0.22), new THREE.MeshBasicMaterial({ color: 0xff7a1a }));
+    f1.position.y = 0.17;
+    const f2 = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.22, 0.11), new THREE.MeshBasicMaterial({ color: 0xffd36b }));
     f2.position.y = 0.14;
-    fl2.add(f1, f2);
-    fl2.position.set(vv, fm + 1.4, -uu);
-    loc.add(pole, fl2);
-    flames.push(fl2);
-    const [wx, wz] = caveWorld(c, uu, vv);
-    lights.push({ x: wx, y: fm + 1.7, z: wz, c: 0xff9a3c, rng: 13, i: 1.2 });
+    fl.add(f1, f2);
+    fl.position.set(v, 1.5, 1.0);
+    loc.add(pole, fl);
+    flames.push(fl);
   };
-  torchAt(U0 + 2.2, -(HW - 0.3));
-  torchAt(U0 + 7.5, HW - 0.3);
-  torchAt(U0 + 12, -(HW - 0.3));
+  torch(-3.0); torch(3.0);
+  const [lx, lz] = caveWorld(c, 0, 0);
+  c.tl = [{ x: lx, y: y0 + 2, z: lz, c: 0xa56bff, rng: 14, i: 1.2 }];
   g.userData.flames = flames;
-  g.userData.lights = lights;
-  c.tl = lights;
+  g.userData.spin = gate.userData.spin;
   return g;
 }
 
@@ -359,6 +334,13 @@ export class Mine {
     g.add(cap);
     this.boxes.push({ minx: capX - 2, maxx: capX, minz: sz - CELL / 2, maxz: sz + CELL / 2, bottom: MINE_Y - 2, top: MINE_Y + WALL_H, p: null });
     this.seamX = this.cx(0) + 0.6;
+    /* portal keluar di ujung lorong */
+    const ex = buildPortalGate('KELUAR', new THREE.MeshStandardMaterial({ map: T.stone, roughness: 1 }));
+    ex.position.set(capX + 0.25, MINE_Y, sz);
+    ex.rotation.y = Math.PI / 2;
+    g.add(ex);
+    this.exitSpin = ex.userData.spin;
+    this.lights.push({ x: capX + 1.2, y: MINE_Y + 2, z: sz, c: 0xa56bff, rng: 13, i: 1.3 });
     this.exit = { x: this.seamX, z: sz, r: 0 };
     this.spawn = { x: this.seamX + 0.8, z: sz, yaw: -Math.PI / 2 };
     this.torch(sx + 0.2, MINE_Y, sz - 1.7, true);

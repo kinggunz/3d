@@ -55,6 +55,44 @@ jobs:
           sed -i '/<style name="AppTheme.NoActionBar"/a \        <item name="android:windowFullscreen">true</item>\n        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>' "$STYLES"
           cat "$STYLES"
 
+      - name: Immersive fullscreen (tanpa garis putih, semua HP)
+        run: |
+          STYLES=android/app/src/main/res/values/styles.xml
+          sed -i '/<style name="AppTheme.NoActionBar"/a \        <item name="android:windowBackground">@android:color/black</item>\n        <item name="android:statusBarColor">@android:color/transparent</item>\n        <item name="android:navigationBarColor">@android:color/transparent</item>\n        <item name="android:windowDrawsSystemBarBackgrounds">true</item>' "$STYLES"
+          MA=$(find android/app/src/main/java -name MainActivity.java | head -1)
+          PKG=$(grep -m1 '^package' "$MA" | sed 's/package //; s/;//')
+          cat > "$MA" <<EOT
+          package $PKG;
+
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.view.WindowManager;
+          import androidx.core.view.WindowCompat;
+          import androidx.core.view.WindowInsetsCompat;
+          import androidx.core.view.WindowInsetsControllerCompat;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+            private void goImmersive() {
+              WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+              if (Build.VERSION.SDK_INT >= 28) {
+                getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+              }
+              WindowInsetsControllerCompat c = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+              if (c != null) {
+                c.hide(WindowInsetsCompat.Type.systemBars());
+                c.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+              }
+              getWindow().getDecorView().setBackgroundColor(0xFF000000);
+            }
+            @Override public void onCreate(Bundle b) { super.onCreate(b); goImmersive(); }
+            @Override public void onResume() { super.onResume(); goImmersive(); }
+            @Override public void onWindowFocusChanged(boolean f) { super.onWindowFocusChanged(f); if (f) goImmersive(); }
+          }
+          EOT
+          cat "$MA" | head -5
+
       - name: Build debug APK
         working-directory: android
         run: |

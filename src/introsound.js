@@ -111,9 +111,128 @@ export class IntroSound {
     this.ramp(this.mur.gain, on ? 0.06 : 0, 0.8);
   }
 
+
+  /* ====== SUARA ORANG buatan sendiri (sintesis formant), tidak butuh TTS / file audio ======
+     Teks Indonesia dipecah jadi suku kata (konsonan + vokal); tiap vokal punya formant F1/F2,
+     konsonan jadi desis/letupan singkat. Pitch beda untuk tiap tokoh dan ada intonasi kalimat. */
+  voice(text, dur, kind = 0, loud = false, bus = null, gender = 'L') {
+    if (!this.ok) return;
+    const c = this.c;
+    const FORM = { a: [800, 1250], i: [300, 2300], u: [330, 850], e: [520, 1850], o: [520, 950] };
+    const base = [112, gender === 'P' ? 215 : 135, 220, 175, 92][kind] || 130;
+    const raw = String(text || '').toLowerCase();
+    const excl = /!/.test(raw), ques = /\?/.test(raw);
+    const txt = raw.replace(/[^a-z ]/g, ' ');
+    const syl = [];
+    let cons = '';
+    for (const ch of txt) {
+      if (ch === ' ') { if (syl.length && !syl[syl.length - 1].pause) syl.push({ pause: true }); cons = ''; }
+      else if ('aiueo'.includes(ch)) { syl.push({ c: cons.slice(-2), v: ch }); cons = ''; }
+      else cons += ch;
+    }
+    while (syl.length && syl[syl.length - 1].pause) syl.pop();
+    const n = syl.length;
+    if (!n) return;
+    const pauses = syl.filter((x) => x.pause).length;
+    const words = n - pauses;
+    const per = Math.max(0.075, Math.min(0.24, (dur * 0.9) / (words + pauses * 0.6)));
+    const t0 = c.currentTime + 0.03;
+    const dest = bus || this.out;
+    const out = c.createGain();
+    out.gain.value = (loud ? 1.25 : 0.8) * (bus ? 1 : 0.55);
+    out.connect(dest);
+    /* sumber suara: gelombang gigi gergaji + getar halus */
+    const osc = c.createOscillator(); osc.type = 'sawtooth';
+    const vib = c.createOscillator(); vib.frequency.value = 5.2;
+    const vg = c.createGain(); vg.gain.value = 14; vib.connect(vg); vg.connect(osc.detune);
+    const env = c.createGain(); env.gain.value = 0;
+    osc.connect(env);
+    const bands = [[700, 7, 1.0], [1200, 9, 0.8], [2600, 10, 0.28]].map(([f, q, g]) => {
+      const b = c.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f; b.Q.value = q;
+      const gg = c.createGain(); gg.gain.value = g;
+      env.connect(b); b.connect(gg); gg.connect(out);
+      return b;
+    });
+    /* desis & letupan konsonan */
+    const ns = c.createBufferSource(); ns.buffer = this.noise; ns.loop = true;
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3200;
+    const ng = c.createGain(); ng.gain.value = 0;
+    ns.connect(hp); hp.connect(ng); ng.connect(out);
+    let t = t0;
+    osc.frequency.setValueAtTime(base, t0);
+    syl.forEach((sy, i) => {
+      if (sy.pause) { env.gain.setTargetAtTime(0, t, 0.02); t += per * 0.6; return; }
+      const prog = i / Math.max(1, n - 1);
+      let f0 = base * (1 + 0.1 * Math.sin(i * 1.3 + kind)) * (1 - 0.14 * prog) * (excl ? 1.12 : 1);
+      if (ques && prog > 0.8) f0 *= 1.0 + (prog - 0.8) * 1.2;
+      const [F1, F2] = FORM[sy.v];
+      const sc = kind === 2 ? 1.12 : kind === 4 ? 0.9 : 1;
+      const cs = sy.c || '';
+      const nasal = /[mn]$/.test(cs);
+      const fric = /[sfhzjc]|sy|kh/.test(cs);
+      const plos = /[ptkbdg]$/.test(cs);
+      const cT = cs ? Math.min(0.05, per * 0.3) : 0;
+      if (cs) {
+        ng.gain.setTargetAtTime(fric ? 0.5 : plos ? 0.35 : 0, t, 0.004);
+        ng.gain.setTargetAtTime(0, t + cT * 0.7, 0.01);
+        env.gain.setTargetAtTime(nasal ? 0.22 : 0.02, t, 0.008);
+      }
+      const tv = t + cT;
+      osc.frequency.setTargetAtTime(f0, tv, 0.03);
+      bands[0].frequency.setTargetAtTime(F1 * sc * (nasal ? 0.7 : 1), tv, 0.02);
+      bands[1].frequency.setTargetAtTime(F2 * sc, tv, 0.02);
+      const amp = (loud ? 0.95 : 0.7) * (0.75 + 0.25 * Math.sin(i * 2.1 + 1));
+      env.gain.setTargetAtTime(amp, tv, 0.012);
+      env.gain.setTargetAtTime(0.05, tv + per * 0.62, 0.025);
+      t += per;
+    });
+    env.gain.setTargetAtTime(0, t, 0.03);
+    const end = t + 0.35;
+    osc.start(t0); vib.start(t0); ns.start(t0);
+    osc.stop(end); vib.stop(end); ns.stop(end);
+    setTimeout(() => { try { out.disconnect(); } catch (e) { /* abaikan */ } }, (end - c.currentTime + 0.3) * 1000);
+  }
+
+  /* percakapan penumpang di kabin: kalimat pendek dari banyak suara, teredam seperti di kejauhan */
+  chatter(on, gender) {
+    if (!this.ok) return;
+    if (!on) { if (this.chatT) { clearTimeout(this.chatT); this.chatT = null; } return; }
+    if (this.chatT) return;
+    const c = this.c;
+    if (!this.chatBus) {
+      this.chatBus = c.createGain(); this.chatBus.gain.value = 0.55;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1700; lp.Q.value = 0.5;
+      this.chatBus.connect(lp); lp.connect(this.out);
+    }
+    const PH = [
+      'wah pemandangannya bagus sekali', 'kamu mau minum apa', 'sebentar lagi kita sampai ya', 'aku nggak sabar lihat pulaunya',
+      'sabuk pengamannya sudah kamu pasang', 'cuacanya cerah banget hari ini', 'ibu lihat awan itu', 'kita nanti makan apa',
+      'tadi di bandara ramai sekali', 'aku baru pertama kali naik pesawat', 'hei bisa geser sedikit', 'terima kasih ya',
+      'berapa lama lagi sampainya', 'anak anak jangan berisik', 'ayo kita foto dulu', 'kopinya enak juga',
+    ];
+    const kinds = [0, 2, 3, 4, 2, 0, 3];
+    const tick = () => {
+      if (!this.ok || !this.chatT) return;
+      const ph = PH[(Math.random() * PH.length) | 0];
+      const k = kinds[(Math.random() * kinds.length) | 0];
+      this.voice(ph, 0.9 + ph.length * 0.055, k, false, this.chatBus, k === 3 || k === 2 ? 'P' : 'L');
+      /* kadang dua orang saling menyahut */
+      if (Math.random() < 0.4) setTimeout(() => { if (this.ok && this.chatT) this.voice(PH[(Math.random() * PH.length) | 0], 1.3, kinds[(Math.random() * kinds.length) | 0], false, this.chatBus); }, 1100 + Math.random() * 700);
+      this.chatT = setTimeout(tick, 1800 + Math.random() * 2600);
+    };
+    this.chatT = setTimeout(tick, 600);
+  }
+
+  /* jeritan penumpang: 'aaaah' dengan pitch tinggi dan bergetar */
+  shout(i, gender) {
+    const kinds = [3, 2, 0, 4];
+    this.voice('aaaaaaah', 1.1, kinds[i % 4], true, null, gender);
+  }
+
   stop() {
     if (!this.ok) return;
     this.alarm(false); this.heart(false);
+    if (this.chatT) { clearTimeout(this.chatT); this.chatT = null; }
     const t = this.c.currentTime;
     this.out.gain.cancelScheduledValues(t);
     this.out.gain.setTargetAtTime(0, t, 0.25);

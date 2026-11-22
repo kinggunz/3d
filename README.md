@@ -1,4 +1,4 @@
-# Petualangan Santay — by Gunz Developer
+# Petualangan Santay — 
 
 Game survival 3D (Three.js) -> APK via Capacitor + GitHub Actions.
 
@@ -40,3 +40,10 @@ Lewat ZArchiver: buka APK, masuk `assets/public/maps/`, ganti/tambah file, simpa
 - **Goa tanpa portal** (`mine.js → makeCave`): mulut goa berupa lubang batu di lereng, terowongan masuk ke bukit (mesh daratan benar-benar dilubangi), lalu tersambung mulus ke tambang bawah tanah. Tidak ada pintu/teleport/layar loading; hanya kedipan singkat di kegelapan terowongan.
 - **Gali tanah berlubang** (`world.js → digTerrain`): sekop menurunkan tinggi daratan membentuk lubang (maks ±3,4 m), warna tanah berubah cokelat, tersimpan di save dan disinkronkan ke pemain lain (`dg`).
 - **Adegan pembuka pesawat** (`intro.js`, `plane.js`, `introsound.js`): semua dunia (solo & Mabar) kecuali War dan Drig di Room Global. Pesawat detail realistis, kabin dengan penumpang sesuai jumlah pemain + kopilot & kapten, dialog bersubtitle, suara mesin/hujan/petir/ledakan/alarm, petir menyambar mesin kiri → "BAM!!!" → jatuh ke pulau → layar gelap → bangun di rumput → bangkai pesawat terbakar lalu meredup. Tombol "Lewati" tersedia.
+
+## v16 — perubahan
+- Splash 3 detik logo G, akun (nama, umur, jenis kelamin, konfirmasi), lobi siang natural: karakter bisa diputar, ketuk untuk emote, profil (kiri atas), tombol Main Solo / Squad (1-10) di atas MULAI.
+- Cuaca (`weather.js`): hujan, hujan petir, redup lalu cerah kembali. Warna dunia lebih natural; pohon & tangan berbentuk kotak.
+- Goa berupa portal (`mine.js`); bangkai pesawat padat & tersimpan; suara orang di pesawat disintesis sendiri (`introsound.js`).
+- Intro bandara ±60 detik (`airport.js`) sebelum adegan pesawat; hanya untuk dunia baru.
+- Layar penuh immersive di Android (langkah baru di workflow).

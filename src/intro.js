@@ -114,7 +114,7 @@ function pickSite(hf, seed, ref, caves) {
 
 export const introMixin = {
   introEligible() {
-    return !this.war && !this.moto && !this.inCave && this.set.intro !== false;
+    return !this.war && !this.moto && !this.inCave && this.set.intro !== false && !this.saved;
   },
   introCam() { return false; },
 
@@ -382,7 +382,7 @@ export const introMixin = {
     if (I.lastInside !== inside) { I.lastInside = inside; I.snd.rain(storm, inside); }
     if (I.rainOn) I.snd.rain(storm, inside);
 
-    I.snd.murmur(inside && t < T_STRIKE - 1 && !I.tts_busy);
+    I.snd.chatter(inside && t < T_STRIKE - 1);
     /* --- subtitle --- */
     this.introSubtitle(t, dt);
 
@@ -462,7 +462,7 @@ export const introMixin = {
       let panic = strike ? sm(T_STRIKE + s.delay, T_STRIKE + s.delay + 0.4, t) : (t > T_STORM + 3 ? 0.0 : 0);
       if (brace) panic = 0;
       poseChar(s.g, { sit: true, time: time + s.v, panic, brace, mv: 0 }, dt);
-      if (!s.g.userData.scream && strike && panic > 0.9 && t < T_FALL + 1) { s.g.userData.scream = true; I.snd.scream(s.v | 0); }
+      if (!s.g.userData.scream && strike && panic > 0.9 && t < T_FALL + 1) { s.g.userData.scream = true; I.snd.scream(s.v | 0); I.snd.shout(s.v | 0); }
       /* kepala menoleh ke jendela saat badai */
       if (!panic && !brace && t > T_STORM && t < T_STRIKE) s.g.userData.head.rotation.y = Math.sin(time * 0.8 + s.v) * 0.5;
       /* sembunyikan penumpangmu sendiri kalau kamera tepat di kepalanya */
@@ -586,29 +586,17 @@ export const introMixin = {
     if (I.spoken !== L) { I.spoken = L; this.introSpeak(L); }
     I.typeAcc += dt * 34;
     const n = Math.min(L[2].length, Math.floor(I.typeAcc));
-    if (n !== I.typeI) { if (n % 3 === 0 && L[1] && !I.tts) I.snd.blip(L[4] || 0); I.typeI = n; $('inTxt').textContent = L[2].slice(0, n); }
+    if (n !== I.typeI) {  I.typeI = n; $('inTxt').textContent = L[2].slice(0, n); }
     const red = L[5] ? '#ff6a5a' : '#fff';
     $('inTxt').style.color = red;
   },
 
-  /* suara orang berbicara (TTS bahasa Indonesia bila ada), tiap tokoh nada beda */
+  /* suara orang berbicara: dibuat sendiri dengan sintesis formant (tanpa TTS), tiap tokoh nada beda */
   introSpeak(L) {
     const I = this.intro;
-    const ss = typeof window !== 'undefined' && window.speechSynthesis;
-    if (!ss || !L[1] || typeof SpeechSynthesisUtterance === 'undefined') return;
-    try {
-      ss.cancel();
-      const u = new SpeechSynthesisUtterance(L[2]);
-      u.lang = 'id-ID';
-      const v = (ss.getVoices() || []).find((x) => /^id/i.test(x.lang));
-      if (v) u.voice = v;
-      const k = L[4];
-      u.pitch = k === 0 ? 0.8 : k === 4 ? 0.55 : k === 1 ? 1.1 : 1.4;
-      u.rate = clamp(L[2].length / (L[3] * 12.5), 0.95, 1.6) * (L[5] ? 1.08 : 1);
-      u.volume = 1;
-      ss.speak(u);
-      I.tts = true;
-    } catch (e) { I.tts = false; }
+    if (!L[1] || !I.snd) return;
+    const k = L[4] || 0;
+    I.snd.voice(L[2], L[3], k, !!L[5], null, this.o.gender === 'P' ? 'P' : 'L');
   },
 
   /* ================= BENTURAN ================= */
@@ -629,20 +617,18 @@ export const introMixin = {
     $('inSub').style.opacity = 0;
   },
 
-  /* pecah pesawat menjadi bangkai: ekor lepas, sayap patah, hangus */
-  introWreckify() {
-    const I = this.intro, P = I.plane, ud = P.userData;
-    P.position.copy(I.W); P.position.y = I.W.y + 0.85;
-    P.rotation.set(0.1, I.heading, -0.17);
+  /* pose bangkai: ekor lepas, sayap patah, hangus (dipakai adegan jatuh & bangkai statis saat dunia dimuat) */
+  wreckPose(P, W, heading) {
+    const ud = P.userData;
+    P.position.copy(W); P.position.y = W.y + 0.85;
+    P.rotation.set(0.1, heading, -0.17);
     ud.skinGroup.visible = true; ud.nose.visible = true; ud.tail.visible = true;
-    /* ekor terlempar */
     const tail = ud.tail;
     tail.position.set(0.4, -0.4, -7); tail.rotation.set(0.12, 0.35, 0.5);
     ud.wingL.rotation.z = -0.5; ud.wingL.position.y = -1.6; ud.wingL.rotation.y = 0.35;
     ud.wingR.rotation.z = 0.35; ud.wingR.position.y = -1.0;
     ud.engL.position.set(7.5, -1.8, 2.8); ud.engL.rotation.set(0.2, 1.1, 0.9);
     ud.nose.rotation.x = 0.0;
-    /* hangus */
     P.traverse((o) => {
       if (!o.isMesh || !o.material || !o.material.color || o.material.isMeshBasicMaterial) return;
       o.material = o.material.clone();
@@ -650,11 +636,76 @@ export const introMixin = {
       if (o.material.map) { o.material.color.multiplyScalar(1.2); }
       o.material.envMapIntensity = 0.25;
     });
-    I.planeLights = null;
     P.updateMatrixWorld(true);
+  },
+
+  /* tabrakan bangkai: permukaan badan/sayap/ekor diubah jadi kotak-kotak 0,5 m (anti tembus) */
+  wreckColliders(P) {
+    if (this.wreckBoxes) { for (const b of this.wreckBoxes) { const i = this.boxes.indexOf(b); if (i >= 0) this.boxes.splice(i, 1); } }
+    this.wreckBoxes = [];
+    const CELL = 0.5;
+    const cells = new Map();
+    const a = new V3(), b = new V3(), c = new V3(), q = new V3();
+    const mark = (x, y, z) => {
+      const ix = Math.floor(x / CELL), iz = Math.floor(z / CELL);
+      const k = ix * 100003 + iz;
+      const e = cells.get(k);
+      if (!e) cells.set(k, { ix, iz, lo: y, hi: y });
+      else { if (y < e.lo) e.lo = y; if (y > e.hi) e.hi = y; }
+    };
+    const grp = P.userData.skinGroup;
+    grp.updateMatrixWorld(true);
+    grp.traverse((o) => {
+      if (!o.isMesh || !o.geometry || !o.geometry.attributes.position) return;
+      const pos = o.geometry.attributes.position, idx = o.geometry.index;
+      const nTri = idx ? idx.count / 3 : pos.count / 3;
+      const get = (i, v) => { const ii = idx ? idx.getX(i) : i; v.fromBufferAttribute(pos, ii).applyMatrix4(o.matrixWorld); };
+      for (let t = 0; t < nTri; t++) {
+        get(t * 3, a); get(t * 3 + 1, b); get(t * 3 + 2, c);
+        const e = Math.max(a.distanceTo(b), b.distanceTo(c), c.distanceTo(a));
+        if (e > 14) continue; /* abaikan segitiga raksasa yang salah bentuk */
+        const n = Math.max(1, Math.min(14, Math.ceil(e / (CELL * 0.8))));
+        for (let i = 0; i <= n; i++) for (let j = 0; j <= n - i; j++) {
+          const u = i / n, v = j / n;
+          q.set(a.x + (b.x - a.x) * u + (c.x - a.x) * v, a.y + (b.y - a.y) * u + (c.y - a.y) * v, a.z + (b.z - a.z) * u + (c.z - a.z) * v);
+          mark(q.x, q.y, q.z);
+        }
+      }
+    });
+    const solid = { k: 'tetap', fixed: true };
+    for (const e of cells.values()) {
+      const gy = this.terr(e.ix * CELL, e.iz * CELL);
+      if (e.hi < gy + 0.25) continue;
+      const bx = { minx: e.ix * CELL, maxx: (e.ix + 1) * CELL, minz: e.iz * CELL, maxz: (e.iz + 1) * CELL, bottom: Math.min(e.lo, gy), top: e.hi + 0.05, p: solid };
+      if (bx.bottom > gy + 2.2) bx.bottom = gy + 2.2; /* di bawah bagian melayang tetap tidak bisa lewat */
+      this.boxes.push(bx);
+      this.wreckBoxes.push(bx);
+    }
+  },
+
+  /* bangkai hangus statis (dunia yang sudah pernah jatuh) */
+  buildStaticWreck(site) {
+    if (!site || this.war || this.moto || this.wreckStatic) return;
+    const P = buildPlane();
+    P.rotation.order = 'YXZ';
+    P.userData.inGroup.visible = false;
+    this.scene.add(P);
+    this.wreckPose(P, new V3(site.x, site.y, site.z), site.h);
+    this.wreckColliders(P);
+    this.wreckStatic = P;
+    this.wreckSite = site;
+  },
+
+  introWreckify() {
+    const I = this.intro, P = I.plane;
+    this.wreckPose(P, I.W, I.heading);
+    this.wreckSite = { x: I.W.x, y: I.W.y, z: I.W.z, h: I.heading };
+    I.planeLights = null;
     I.cabinLight.visible = false;
     this.wreck = { P, W: I.W.clone(), t: I.wreckT0 || 0, parts: I.parts, light: I.fireLight, snd: I.snd, acc: 0, env: I.env, rain: I.rain, fireAcc: 0 };
     I.wreckPlaced = true;
+    /* interior disembunyikan nanti; tabrakan dihitung dari bagian luar saja */
+    this.wreckColliders(P);
   },
 
   /* ================= BANGUN DI RUMPUT ================= */

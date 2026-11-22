@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Petualangan Santay - game survival 3D by Gunz Developer",
+  "description": "Petualangan Santay - game survival 3D by Gunz",
   "scripts": {
     "dev": "vite",
     "build": "vite build"
