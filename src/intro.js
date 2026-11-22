@@ -6,6 +6,7 @@ import { Audio } from './audio.js';
 import { buildChar, SKINS, unpackLook, poseChar, clearPose } from './chars.js';
 import { buildPlane, ROW0, ROWS, ROW_PITCH, FLOOR_Y, SEAT_X } from './plane.js';
 import { IntroSound } from './introsound.js';
+import { say, stopSay } from './speak.js';
 import { clamp, lerp, mulberry32 } from './util.js';
 import { HALF } from './world.js';
 
@@ -382,7 +383,7 @@ export const introMixin = {
     if (I.lastInside !== inside) { I.lastInside = inside; I.snd.rain(storm, inside); }
     if (I.rainOn) I.snd.rain(storm, inside);
 
-    I.snd.chatter(inside && t < T_STRIKE - 1);
+    I.snd.murmur(inside && t < T_STRIKE - 1);
     /* --- subtitle --- */
     this.introSubtitle(t, dt);
 
@@ -462,7 +463,7 @@ export const introMixin = {
       let panic = strike ? sm(T_STRIKE + s.delay, T_STRIKE + s.delay + 0.4, t) : (t > T_STORM + 3 ? 0.0 : 0);
       if (brace) panic = 0;
       poseChar(s.g, { sit: true, time: time + s.v, panic, brace, mv: 0 }, dt);
-      if (!s.g.userData.scream && strike && panic > 0.9 && t < T_FALL + 1) { s.g.userData.scream = true; I.snd.scream(s.v | 0); I.snd.shout(s.v | 0); }
+      if (!s.g.userData.scream && strike && panic > 0.9 && t < T_FALL + 1) { s.g.userData.scream = true; I.snd.scream(s.v | 0); if (!I.screamSaid) { I.screamSaid = true; say('Aaaaaah! Tolong!', 2, { shout: true }); } }
       /* kepala menoleh ke jendela saat badai */
       if (!panic && !brace && t > T_STORM && t < T_STRIKE) s.g.userData.head.rotation.y = Math.sin(time * 0.8 + s.v) * 0.5;
       /* sembunyikan penumpangmu sendiri kalau kamera tepat di kepalanya */
@@ -580,7 +581,17 @@ export const introMixin = {
     const I = this.intro;
     const L = I.lines.find((l) => l[0] <= t && t < l[0] + l[3]);
     const box = $('inSub');
-    if (!L) { box.style.opacity = 0; I.line = null; return; }
+    if (!L) {
+      box.style.opacity = 0; I.line = null;
+      /* obrolan penumpang di sela dialog */
+      I.chatCd = (I.chatCd == null ? 3 : I.chatCd) - dt;
+      if (I.chatCd <= 0 && t > 2 && t < T_STRIKE - 4) {
+        I.chatCd = 6 + Math.random() * 5;
+        const PH = ['Wah, pemandangannya bagus sekali.', 'Sebentar lagi kita sampai ya.', 'Aku belum sabar lihat pulaunya.', 'Kopinya enak juga.', 'Ibu, lihat awan itu.'];
+        say(PH[(Math.random() * PH.length) | 0], [2, 3, 0][(Math.random() * 3) | 0], { volume: 0.5 });
+      }
+      return;
+    }
     if (I.line !== L) { I.line = L; I.typeI = 0; I.typeAcc = 0; $('inWho').textContent = L[1] ? L[1] + ': ' : ''; $('inWho').style.color = L[1] === 'Kopilot Raka' ? '#7fd1ff' : L[1] === 'Kapten' ? '#ffd27f' : '#9dff9d'; $('inTxt').textContent = ''; }
     box.style.opacity = 1;
     if (I.spoken !== L) { I.spoken = L; this.introSpeak(L); }
@@ -591,12 +602,10 @@ export const introMixin = {
     $('inTxt').style.color = red;
   },
 
-  /* suara orang berbicara: dibuat sendiri dengan sintesis formant (tanpa TTS), tiap tokoh nada beda */
+  /* suara orang berbicara bahasa Indonesia (mesin suara HP), tiap tokoh nada berbeda */
   introSpeak(L) {
-    const I = this.intro;
-    if (!L[1] || !I.snd) return;
-    const k = L[4] || 0;
-    I.snd.voice(L[2], L[3], k, !!L[5], null, this.o.gender === 'P' ? 'P' : 'L');
+    if (!L[1]) return;
+    say(L[2], L[4] || 0, { gender: this.o.gender === 'P' ? 'P' : 'L', shout: !!L[5] });
   },
 
   /* ================= BENTURAN ================= */
@@ -762,7 +771,7 @@ export const introMixin = {
     }
     I.ended = true;
     I.snd.stop();
-    try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) { /* abaikan */ }
+    stopSay();
     const p = this.p;
     p.yaw = I.woke ? I.toWreck : (I.toWreck ?? p.yaw);
     p.pitch = -0.05;

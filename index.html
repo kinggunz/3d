@@ -72,29 +72,30 @@
     <div id="sLobby" class="screen">
       <button id="lbProfile" class="profileChip" type="button"><canvas id="lbAvatar" width="96" height="96"></canvas><span id="lbName">Santay</span></button>
       <div class="topRight"><button id="lbSet" class="iconBtn" data-ic="gear"></button></div>
-      <div class="leftMid"><button id="lbVault" class="btn side" data-ic="chest">Vault</button><button id="lbEdit" class="btn side" data-ic="person">Editor</button><button id="lbGuide" class="btn side" data-ic="book">Panduan</button></div>
+      <div class="leftMid"><button id="lbVault" class="btn side" data-ic="chest">Vault</button><button id="lbEdit" class="btn side" data-ic="person">Editor</button><button id="lbGuide" class="btn side" data-ic="book">Panduan</button><button id="lbFriends" class="btn side" type="button">Teman<i id="frBadge" class="frBadge hidden">0</i></button></div>
       <div class="charTag nameBelow" id="lbChar">Santay</div>
       <div id="lbHint" class="lbHint">Geser untuk memutar · ketuk karakter untuk emote</div>
       <div class="bottomRight">
-        <button id="btnMode" class="btn modeBtn modeBox" type="button">Main Solo</button>
         <button id="btnStart" class="btn start" type="button">MULAI</button>
         <div class="miniRow"><button id="btnOnline" class="btn small dim" data-ic="globe">Online</button><button id="btnWorlds" class="btn small dim" data-ic="world">Dunia</button></div>
       </div>
     </div>
 
-    <!-- MENU MODE: SOLO / SQUAD -->
-    <div id="mMode" class="modal">
-      <div class="card">
-        <h3>Pilih Mode Main</h3>
-        <div class="modeOpts">
-          <button id="mdSolo" class="modeOpt" type="button"><b>Solo</b><small>Main sendirian</small></button>
-          <button id="mdSquad" class="modeOpt" type="button"><b>Squad</b><small>Main bareng teman (1-10)</small></button>
+    <!-- TEMAN -->
+    <div id="sFriends" class="screen shade">
+      <button id="frBack" class="btn back" data-ic="back">Kembali</button>
+      <div class="onWrap">
+        <div class="onLeft">
+          <h2 class="pageTitle">Teman</h2>
+          <div class="frMe">Kode temanmu<b id="frCode">------</b><small id="frNet">Menghubungkan...</small></div>
+          <div class="frSearch"><input id="frQ" maxlength="14" placeholder="Cari nama / kode teman" autocomplete="off" /><button id="frGo" class="btn small" type="button">Cari</button></div>
+          <div id="frFound" class="frFound"></div>
         </div>
-        <div id="squadPick" class="squadPick hidden">
-          <label>Jumlah pemain squad</label>
-          <div class="stepper"><button id="sqMinus" type="button" class="btn small">-</button><b id="sqN">4</b><button id="sqPlus" type="button" class="btn small">+</button></div>
+        <div class="onRight">
+          <div class="listHead"><b>Daftar Teman</b><span id="frCount"></span></div>
+          <div id="frReqs" class="frReqs"></div>
+          <div id="frList" class="roomList"></div>
         </div>
-        <button id="modeOk" class="btn">Pilih</button>
       </div>
     </div>
 

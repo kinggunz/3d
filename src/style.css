@@ -557,8 +557,8 @@ input:focus { box-shadow: 0 0 0 3px rgba(255, 179, 0, 0.45); }
 .confBtns { display: flex; gap: 12px; align-items: center; }
 .hint { opacity: 0.75; font-size: 12px; }
 
-.profileChip { position: absolute; left: calc(14px + var(--sal)); top: calc(12px + var(--sat)); display: flex; align-items: center; gap: 10px; padding: 5px 18px 5px 6px; border-radius: 30px; background: var(--dark); border: 2px solid rgba(255, 255, 255, 0.3); color: #fff; font-weight: 800; font-size: 16px; cursor: pointer; }
-.profileChip canvas { width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); pointer-events: none; }
+.profileChip { position: absolute; left: calc(14px + var(--sal)); top: calc(12px + var(--sat)); display: flex; align-items: center; gap: 12px; min-width: 230px; max-width: 46vw; padding: 7px 26px 7px 8px; font-size: 18px; border-radius: 30px; background: var(--dark); border: 2px solid rgba(255, 255, 255, 0.3); color: #fff; font-weight: 800; font-size: 16px; cursor: pointer; }
+.profileChip canvas { width: 54px; height: 54px; flex: none; border-radius: 50%; background: rgba(255, 255, 255, 0.12); pointer-events: none; }
 .profileChip:active { transform: scale(0.97); }
 .charTag.nameBelow { top: auto; bottom: calc(18px + var(--sab)); background: rgba(14, 22, 40, 0.78); border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 12px; padding: 8px 26px; font-size: 18px; pointer-events: none; }
 .lbHint { position: absolute; left: 50%; bottom: calc(70px + var(--sab)); transform: translateX(-50%); font-size: 12px; opacity: 0.7; pointer-events: none; text-shadow: 0 1px 3px #000; white-space: nowrap; }
@@ -590,3 +590,18 @@ input:focus { box-shadow: 0 0 0 3px rgba(255, 179, 0, 0.45); }
 .lbEmoteGrid button { padding: 8px 4px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.3); background: rgba(14, 28, 80, 0.82); color: #fff; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; cursor: pointer; }
 .lbEmoteGrid button img, .lbEmoteGrid button .ic { width: 30px; height: 30px; }
 @media (max-height: 420px) { .modeBox, .modeBtn { padding: 9px 14px; font-size: 15px; } .btn.start { font-size: 22px; padding: 12px 24px; } .lbHint { display: none; } }
+
+.profileChip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn.side { position: relative; display: block; margin-bottom: 8px; }
+.frBadge { position: absolute; right: -6px; top: -6px; min-width: 22px; height: 22px; border-radius: 11px; background: #e53935; color: #fff; font-style: normal; font-size: 13px; line-height: 22px; text-align: center; padding: 0 5px; }
+.frMe { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: 14px; background: var(--dark); border: 2px solid rgba(255,255,255,.3); margin-bottom: 10px; font-size: 13px; opacity: .95; }
+.frMe b { font-size: 28px; letter-spacing: 6px; color: var(--acc); }
+.frMe small { opacity: .7; }
+.frSearch { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.frSearch input { width: 100%; max-width: none; padding: 10px 12px; font-size: 15px; }
+.frFound, .frReqs { display: flex; flex-direction: column; gap: 6px; max-height: 30vh; overflow-y: auto; }
+.frRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 12px; background: rgba(14, 28, 80, 0.82); border: 2px solid rgba(255,255,255,.22); font-weight: 700; }
+.frRow small { display: block; font-weight: 500; opacity: .75; font-size: 12px; }
+.frRow .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: #777; }
+.frRow .dot.on { background: #4cd964; } .frRow .dot.pl { background: #ffb300; }
+.frAct { display: flex; gap: 4px; }

@@ -5,6 +5,7 @@ import { buildChar, idlePose, resetPose } from './chars.js';
 import { buildPlane } from './plane.js';
 import { IntroSound } from './introsound.js';
 import { Audio } from './audio.js';
+import { say, stopSay } from './speak.js';
 import { mulberry32, clamp, lerp } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -54,7 +55,7 @@ export class Airport {
     const box = (w, h, d, m, x, y, z, parent) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); (parent || sc).add(o); return o; };
 
     /* tanah, jalan, trotoar */
-    box(260, 0.2, 120, std(0x6f9a4c), 20, -0.1, 0);
+    box(260, 0.2, 120, std(0x6f9a4c), 20, -0.12, 0);
     box(70, 0.22, 7, std(0x45474b), -2, -0.08, -1);
     for (let x = -34; x < 30; x += 6) box(2.6, 0.24, 0.25, std(0xf2eeda), x, -0.07, -1);
     box(80, 0.26, 3.2, std(0xb9b5ab), -2, -0.07, 4.6);
@@ -81,7 +82,7 @@ export class Airport {
 
     /* terminal bandara: lantai x 23..46, kaca depan */
     const glass = new THREE.MeshStandardMaterial({ color: 0x9cc7e6, transparent: true, opacity: 0.35, roughness: 0.1 });
-    box(24, 0.3, 26, std(0xd8d2c4), 35, 0.0, 0);
+    box(24, 0.3, 26, std(0xd8d2c4), 35, -0.02, 0);
     box(26, 0.5, 28, std(0x8d8a85), 35, 7.4, 0);
     box(0.4, 7, 9, glass, 22.9, 3.5, 8.5); box(0.4, 7, 9, glass, 22.9, 3.5, -8.5); box(0.4, 1.2, 8, std(0x6a6f78), 22.9, 6.5, 0);
     box(24, 7, 0.4, glass, 35, 3.5, 13); box(24, 7, 0.4, std(0xc9c3b6), 35, 3.5, -13);
@@ -97,7 +98,7 @@ export class Airport {
     /* bangku */
     for (let z = 3; z <= 9; z += 3) box(1, 0.5, 2.4, std(0x3a4a66), 28, 0.4, z);
     /* landasan */
-    box(90, 0.2, 60, std(0x55585c), 90, -0.1, 0);
+    box(90, 0.2, 60, std(0x55585c), 90, -0.06, 0);
     for (let x = 52; x < 130; x += 8) box(3.5, 0.22, 0.3, std(0xf2eeda), x, -0.05, 9);
     /* pesawat parkir: hidung ke +x */
     const P = this.plane = buildPlane();
@@ -124,7 +125,7 @@ export class Airport {
     }
 
     this.snd = new IntroSound();
-    this.snd.chatter(true);
+    this.snd.murmur(true);
     this.ui();
   }
 
@@ -211,7 +212,7 @@ export class Airport {
         $('apWho').style.color = L[1] === 'me' ? '#9dff9d' : L[1] === 'Pengumuman' ? '#ffd27f' : '#7fd1ff';
         $('apTxt').textContent = L[2];
         const kind = L[1] === 'me' ? 1 : L[1] === 'Petugas' ? 2 : 3;
-        this.snd.voice(L[2], L[3], kind, false, null, L[1] === 'me' ? this.gender : 'P');
+        say(L[2], kind, { gender: this.gender });
       }
       box.style.opacity = 1;
     }
@@ -224,8 +225,9 @@ export class Airport {
   finish() {
     if (this.done) return;
     this.done = true;
-    this.snd.chatter(false);
+    this.snd.murmur(false);
     this.snd.stop();
+    stopSay();
     const u = $('apUI'); if (u) u.remove();
     this.scene.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
     if (this.onDone) this.onDone();

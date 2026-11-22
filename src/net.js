@@ -8,7 +8,7 @@ const BROKERS = [
   'wss://broker.hivemq.com:8884/mqtt',
   'wss://test.mosquitto.org:8081',
 ];
-const NS = 'gunzdev/santay/v1';
+export const NS = 'gunzdev/santay/v1';
 export const MAXP = 4;
 export const WORLD_MAX = 6;
 export const OW_MAX = 12;
@@ -24,7 +24,7 @@ const dec = (b) => {
   try { return JSON.parse(b.toString()); } catch (e) { return null; }
 };
 
-function openClient(extra) {
+export function openClient(extra) {
   return new Promise((resolve, reject) => {
     if (!connectFn) { reject(new Error('Modul online tidak tersedia.')); return; }
     let i = 0;

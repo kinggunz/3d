@@ -12,6 +12,7 @@ import { initTextures } from './textures.js';
 import { sleep } from './util.js';
 import { hydrate, ico, setIcon } from './icons.js';
 import { openGuide, initGuide } from './guide.js';
+import { Friends, newFid } from './friends.js';
 
 hydrate();
 initGuide();
@@ -47,6 +48,7 @@ document.addEventListener('click', (e) => {
 const settings = Object.assign({ gfx: 'standar', fps: 60, sens: 1, music: 0.6, sfx: 0.8, view: 'sedang', cam: 'fp' }, store.get('ps_settings', {}));
 Audio.setVolumes(settings.music, settings.sfx);
 let account = store.get('ps_account', null);
+let friends = null;
 let skinId = store.get('ps_skin', 0);
 if (!SKINS[skinId]) skinId = 0;
 let customLook = store.get('ps_look', null); /* hasil Editor Karakter; null = pakai karakter bawaan */
@@ -63,7 +65,7 @@ let net = null;
 let inRoom = false;
 let mode = 'none';
 
-const SCREENS = ['sSplash', 'sLoad', 'sIntro', 'sLobby', 'sProfile', 'sWorlds', 'sNewWorld', 'sOnline', 'sCreate', 'sFind', 'sRoom', 'sChar', 'hud'];
+const SCREENS = ['sSplash', 'sLoad', 'sIntro', 'sLobby', 'sProfile', 'sFriends', 'sWorlds', 'sNewWorld', 'sOnline', 'sCreate', 'sFind', 'sRoom', 'sChar', 'hud'];
 let browse = null;
 function stopBrowse() {
   if (browse) { browse.close(); browse = null; }
@@ -403,7 +405,7 @@ async function intro() {
       hideAll();
       $('introConfirm').classList.remove('hidden');
       $('btnConfOk').onclick = () => {
-        account = { name: n, age, gender, bio: (account && account.bio) || '' };
+        account = { name: n, age, gender, bio: (account && account.bio) || '', fid: (account && account.fid) || newFid() };
         store.set('ps_account', account);
         finish();
       };
@@ -448,8 +450,6 @@ $('sfxRange').onchange = () => Audio.sfx('pickup');
 $('setClose').onclick = () => $('mSet').classList.remove('show');
 
 /* ================= LOBI ================= */
-let playMode = Object.assign({ mode: 'solo', n: 4 }, store.get('ps_playmode', {}));
-if (!(playMode.n >= 1 && playMode.n <= 10)) playMode.n = 4;
 
 function paintAvatar(cv, look) {
   const tmp = document.createElement('canvas');
@@ -460,7 +460,6 @@ function paintAvatar(cv, look) {
   /* potong bagian kepala & bahu */
   g.drawImage(tmp, 100 - 40, 6, 80, 80, 0, 0, cv.width, cv.height);
 }
-function modeLabel() { return playMode.mode === 'squad' ? 'Squad · ' + playMode.n + ' orang' : 'Main Solo'; }
 
 function toLobby() {
   mode = 'lobby';
@@ -470,7 +469,6 @@ function toLobby() {
   renderer.setSize(innerWidth, innerHeight);
   $('lbName').textContent = account.name;
   $('lbChar').textContent = account.name;
-  $('btnMode').textContent = modeLabel();
   paintAvatar($('lbAvatar'), curLook());
   lobby.setMode('idle');
   lobby.setLook(curLook());
@@ -500,38 +498,14 @@ function saveBio() {
 }
 $('pfSave').onclick = () => { saveBio(); flash('Bio disimpan'); };
 
-/* ---- menu mode: Solo / Squad (1-10) ---- */
-let pendingMode = null;
-function paintModeMenu() {
-  const m = pendingMode;
-  $('mdSolo').classList.toggle('on', m.mode === 'solo');
-  $('mdSquad').classList.toggle('on', m.mode === 'squad');
-  $('squadPick').classList.toggle('hidden', m.mode !== 'squad');
-  $('sqN').textContent = m.n;
-}
-$('btnMode').onclick = () => { pendingMode = Object.assign({}, playMode); paintModeMenu(); $('mMode').classList.add('show'); };
-$('mdSolo').onclick = () => { pendingMode.mode = 'solo'; paintModeMenu(); };
-$('mdSquad').onclick = () => { pendingMode.mode = 'squad'; paintModeMenu(); };
-$('sqMinus').onclick = () => { pendingMode.n = Math.max(1, pendingMode.n - 1); paintModeMenu(); };
-$('sqPlus').onclick = () => { pendingMode.n = Math.min(10, pendingMode.n + 1); paintModeMenu(); };
-$('modeOk').onclick = () => {
-  playMode = pendingMode;
-  store.set('ps_playmode', playMode);
-  $('btnMode').textContent = modeLabel();
-  $('mMode').classList.remove('show');
-};
-
 /* ---- MULAI: lanjut dunia terakhir (atau buat dunia baru) ---- */
 function startPlay() {
   let wd = listWorlds()[0];
   if (!wd) {
     try { wd = createWorld('Pulau ' + account.name); } catch (e) { flash(e.message); return; }
   }
-  if (playMode.mode === 'squad') {
-    startGame({ online: false, world: wd, host: true, squad: playMode.n });
-  } else {
-    startGame({ online: false, world: wd, host: false });
-  }
+  /* dunia dibuka agar teman bisa masuk (bisa dimatikan di menu Dunia) */
+  startGame({ online: false, world: wd, host: settings.openWorld !== false });
 }
 $('btnStart').onclick = startPlay;
 
@@ -543,9 +517,19 @@ function buildLobbyEmotes() {
     const b = document.createElement('button');
     b.type = 'button';
     b.innerHTML = ico(e.icon) + '<span>' + e.name + '</span>';
-    b.onclick = () => { lobby.playEmote(e.id); $('mLbEmote').classList.remove('show'); };
+    b.onclick = (ev) => { if (performance.now() - emoteOpenAt < 500) return; lobby.playEmote(e.id); $('mLbEmote').classList.remove('show'); };
     g.appendChild(b);
   }
+}
+let emoteOpenAt = 0;
+function openLobbyEmotes() {
+  if (performance.now() - emoteOpenAt < 600) return;
+  emoteOpenAt = performance.now();
+  buildLobbyEmotes();
+  const m = $('mLbEmote');
+  m.style.pointerEvents = 'none'; /* ketukan yang sama tidak boleh menembus ke tombol emote */
+  m.classList.add('show');
+  setTimeout(() => { m.style.pointerEvents = ''; }, 450);
 }
 $('lbEmoteClose').onclick = () => $('mLbEmote').classList.remove('show');
 
@@ -612,6 +596,105 @@ function openEditor() {
 }
 $('lbEdit').onclick = openEditor;
 $('vaultEdit').onclick = openEditor;
+
+
+/* ================= TEMAN ================= */
+function startFriends() {
+  if (friends || !account) return;
+  if (!account.fid) { account.fid = newFid(); store.set('ps_account', account); }
+  friends = new Friends({ fid: account.fid, name: account.name }, renderFriends);
+  friends.start();
+}
+function paintBadge() {
+  const n = friends ? friends.reqs.size : 0;
+  const b = $('frBadge');
+  b.textContent = n; b.classList.toggle('hidden', !n);
+}
+function frRow(name, sub, dotCls) {
+  const row = document.createElement('div');
+  row.className = 'frRow';
+  const l = document.createElement('div');
+  const nm = document.createElement('b');
+  nm.innerHTML = (dotCls ? '<span class="dot ' + dotCls + '"></span>' : '') + '<span></span>';
+  nm.lastChild.textContent = name;
+  l.appendChild(nm);
+  if (sub) { const sm = document.createElement('small'); sm.textContent = sub; l.appendChild(sm); }
+  const act = document.createElement('div');
+  act.className = 'frAct';
+  row.append(l, act);
+  return [row, act];
+}
+const frBtn = (txt, fn, cls) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small ' + (cls || ''); b.textContent = txt; b.onclick = fn; return b; };
+let lastFound = [];
+function renderFriends() {
+  paintBadge();
+  if (!$('sFriends').classList.contains('show') || !friends) return;
+  $('frCode').textContent = account.fid;
+  $('frNet').textContent = friends.online ? 'Terhubung — teman bisa mencarimu dengan kode ini' : (friends.err ? 'Tidak ada internet' : 'Menghubungkan...');
+  $('frCount').textContent = friends.list.length + ' teman';
+  const rq = $('frReqs');
+  rq.innerHTML = '';
+  for (const r of friends.reqs.values()) {
+    const [row, act] = frRow(r.name, 'Ingin berteman denganmu', '');
+    act.append(frBtn('Terima', () => friends.accept(r.id)), frBtn('Tolak', () => friends.reject(r.id), 'dim'));
+    rq.appendChild(row);
+  }
+  const L = $('frList');
+  L.innerHTML = '';
+  if (!friends.list.length) L.innerHTML = '<div class="roomEmpty">Belum ada teman.<br>Cari teman lewat nama atau kode.</div>';
+  const order = { playing: 0, online: 1, offline: 2 };
+  const items = friends.list.map((f) => ({ f, st: friends.status(f.id) })).sort((a, b) => order[a.st.s] - order[b.st.s]);
+  for (const { f, st } of items) {
+    const sub = st.s === 'playing' ? 'Sedang bermain' + (st.rn ? ': ' + st.rn : '') : st.s === 'online' ? 'Online di lobi' : 'Offline';
+    const [row, act] = frRow(f.name, sub, st.s === 'playing' ? 'pl' : st.s === 'online' ? 'on' : '');
+    if (st.s === 'playing') act.append(frBtn('Masuk', () => joinFriend(st), ''));
+    let armed = 0;
+    const del = frBtn('Hapus', () => {
+      if (!armed) { armed = setTimeout(() => { armed = 0; del.textContent = 'Hapus'; }, 3000); del.textContent = 'Yakin?'; return; }
+      clearTimeout(armed); friends.remove(f.id);
+    }, 'danger');
+    act.append(del);
+    L.appendChild(row);
+  }
+  const F = $('frFound');
+  F.innerHTML = '';
+  for (const x of lastFound) {
+    const mine = x.id === account.fid;
+    if (mine) continue;
+    const [row, act] = frRow(x.name || 'Pemain', 'Kode ' + x.id, '');
+    if (friends.isFriend(x.id)) act.append(frBtn('Teman', () => {}, 'dim'));
+    else act.append(frBtn('Tambah', (e) => { if (friends.request(x.id)) { e.target.textContent = 'Terkirim'; e.target.classList.add('dim'); } else flash('Tidak ada internet'); }));
+    F.appendChild(row);
+  }
+}
+async function joinFriend(st) {
+  if (joining) return;
+  show('sOnline'); /* memakai alur masuk room yang sama */
+  await joinFromList({ id: st.room, name: st.rn || 'Dunia teman' });
+  if (mode === 'lobby') show('sFriends');
+}
+function openFriends() {
+  startFriends();
+  lobby.enabled = false;
+  show('sFriends');
+  lastFound = [];
+  $('frQ').value = '';
+  renderFriends();
+}
+$('lbFriends').onclick = openFriends;
+$('frBack').onclick = () => { toLobby(); };
+async function doSearch() {
+  const q = $('frQ').value.trim();
+  if (q.length < 2) { flash('Ketik minimal 2 huruf atau kode teman'); return; }
+  if (!friends || !friends.online) { flash('Belum terhubung ke internet'); return; }
+  $('frFound').innerHTML = '<div class="roomEmpty">Mencari...</div>';
+  const r = await friends.search(q);
+  lastFound = r || [];
+  renderFriends();
+  if (r && !r.length) $('frFound').innerHTML = '<div class="roomEmpty">Tidak ditemukan.</div>';
+}
+$('frGo').onclick = doSearch;
+$('frQ').onkeydown = (e) => { if (e.key === 'Enter') doSearch(); };
 
 /* ================= DUNIA SAYA ================= */
 const dateTxt = (t) => { try { return new Date(t).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }); } catch (e) { return ''; } };
@@ -690,10 +773,10 @@ function playWorld(wd) {
   startGame({ online: false, world: wd, host: settings.openWorld !== false });
 }
 
-async function hostWorldInBackground(g, wd, maxP) {
+async function hostWorldInBackground(g, wd) {
   const n = new Net();
   try {
-    await n.host(maxP ? 'Squad ' + account.name : wd.name, '', myInfo(), { world: true, seed: wd.seed, max: maxP || WORLD_MAX });
+    await n.host(wd.name, '', myInfo(), { world: true, seed: wd.seed, max: WORLD_MAX });
   } catch (e) {
     n.close();
     if (game === g) flash('Dunia dimainkan offline (' + (e.message || 'tidak ada internet') + ')');
@@ -704,6 +787,7 @@ async function hostWorldInBackground(g, wd, maxP) {
   n.onMsg = (m) => { try { g.onNet(m); } catch (er) { showErr(er.message); } };
   n.onClosed = () => {};
   g.attachNet(n);
+  if (friends) friends.setPlaying(n.roomId, wd.name);
 }
 
 /* ================= ONLINE ================= */
@@ -868,7 +952,7 @@ async function joinFromList(r) {
   }
   joining = false;
   net = n;
-  if (n.info && n.info.world) { startGame({ online: true, seed: n.info.seed, joinWorld: true }); return; }
+  if (n.info && n.info.world) { if (friends) friends.setPlaying(n.roomId, n.info.name || r.name); startGame({ online: true, seed: n.info.seed, joinWorld: true }); return; }
   setupRoom(r.name, false);
 }
 
@@ -990,11 +1074,11 @@ async function startGame(o) {
   g.begin();
   window.__game = g;
   mode = 'game';
-  if (o.world && o.host) hostWorldInBackground(g, o.world, o.squad || 0);
-  if (o.squad) flash('Squad dibuka (maks ' + o.squad + ' orang). Teman gabung lewat Online > Room Global');
+  if (o.world && o.host) hostWorldInBackground(g, o.world);
 }
 
 function exitGame() {
+  if (friends) friends.setIdle();
   Audio.music('menu');
   if (game) { game.dispose(); game = null; }
   if (net) { net.close(); net = null; }
@@ -1053,7 +1137,7 @@ async function boot() {
     p(35, 'Menyiapkan lobi...');
     lobby = new Lobby();
     lobby.bindInput($('gl'));
-    lobby.onTapChar = () => { buildLobbyEmotes(); $('mLbEmote').classList.add('show'); };
+    lobby.onTapChar = () => { openLobbyEmotes(); };
     lobby.setLook(curLook());
     await sleep(700);
     p(65, 'Membangun dunia survival...');
@@ -1062,6 +1146,7 @@ async function boot() {
     await sleep(700);
   });
   await intro();
+  startFriends();
   toLobby();
 }
 
