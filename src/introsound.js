@@ -94,6 +94,23 @@ export class IntroSound {
   ring(on) { if (!this.ok) return; if (on) { this.tone(4200, 3800, 4.5, 'sine', 0.06); } }
   fire(v) { if (!this.ok || v <= 0.02) return; this.burst(0.1, 0.35 * v, 3200 + Math.random() * 2000, 1500, 'bandpass', 2); }
 
+  /* gumaman penumpang mengobrol di kabin: noise berformant dengan irama suku kata */
+  murmur(on) {
+    if (!this.ok) return;
+    if (!this.mur) {
+      const c = this.c;
+      this.mur = c.createGain(); this.mur.gain.value = 0; this.mur.connect(this.out);
+      const src = c.createBufferSource(); src.buffer = this.noise; src.loop = true;
+      for (const [f, q, g] of [[520, 6, 1.0], [1450, 8, 0.7], [2600, 8, 0.35]]) {
+        const b = c.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f; b.Q.value = q;
+        const gg = c.createGain(); gg.gain.value = g; src.connect(b); b.connect(gg); gg.connect(this.mur);
+      }
+      const lfo = c.createOscillator(); lfo.frequency.value = 3.6; const lg = c.createGain(); lg.gain.value = 0.04;
+      lfo.connect(lg); lg.connect(this.mur.gain); lfo.start(); src.start(); this.src.push(src, lfo);
+    }
+    this.ramp(this.mur.gain, on ? 0.06 : 0, 0.8);
+  }
+
   stop() {
     if (!this.ok) return;
     this.alarm(false); this.heart(false);

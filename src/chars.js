@@ -92,16 +92,17 @@ const HEADY = 1.4; /* leher */
 /* ===== bantuan bentuk halus ===== */
 const gc = new Map();
 const cached = (k, f) => { if (!gc.has(k)) gc.set(k, f()); return gc.get(k); };
-const sphGeo = (r) => cached('s' + r, () => new THREE.SphereGeometry(r, 16, 12));
-const capGeo = (r, len) => cached('c' + r + ',' + len, () => new THREE.CapsuleGeometry(r, len, 4, 10));
-const rbxGeo = (w, h, dd, r) => cached('r' + [w, h, dd, r], () => new RoundedBoxGeometry(w, h, dd, 3, r));
+const sphGeo = (r) => cached('s' + r, () => new THREE.BoxGeometry(r * 2, r * 2, r * 2));
+const capGeo = (r, len) => cached('c' + r + ',' + len, () => new THREE.BoxGeometry(r * 2.15, len + r * 2, r * 2.15));
+const rbxGeo = (w, h, dd, r) => cached('r' + [w, h, dd, r], () => new RoundedBoxGeometry(w, h, dd, 2, r * 0.3));
 const coneGeo = new THREE.ConeGeometry(0.05, 0.16, 6);
 const sph = (rx, ry, rz, c, dome) => {
-  const g = dome ? cached('dome', () => new THREE.SphereGeometry(1, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.62)) : cached('unit', () => new THREE.SphereGeometry(1, 16, 12));
+  /* bentuk kotak (bukan bola): 'dome' = balok rambut menutupi bagian atas kepala */
+  const g = dome ? cached('domeb', () => { const b = new THREE.BoxGeometry(2, 1.4, 2); b.translate(0, 0.3, 0); return b; }) : cached('unitb', () => new THREE.BoxGeometry(2, 2, 2));
   const m = new THREE.Mesh(g, M(c)); m.scale.set(rx, ry, rz); return m;
 };
 const rbx = (w, h, dd, r, c) => new THREE.Mesh(rbxGeo(w, h, dd, r), M(c));
-const cyl2 = (rt, rb, h, c) => new THREE.Mesh(cached('y' + [rt, rb, h], () => new THREE.CylinderGeometry(rt, rb, h, 12)), M(c));
+const cyl2 = (rt, rb, h, c) => new THREE.Mesh(cached('y' + [rt, rb, h], () => new THREE.BoxGeometry(Math.max(rt, rb) * 2, h, Math.max(rt, rb) * 2)), M(c));
 const cap2 = (r, len, c) => new THREE.Mesh(capGeo(r, len), M(c));
 const ubx = (m, x, y, z) => { m.position.set(x, y - UP, z); m.castShadow = true; return m; };
 
@@ -126,8 +127,8 @@ export function buildChar(src) {
   /* leher */
   hp(cyl2(0.075, 0.085, 0.16, d.skin), 0, 1.42, 0);
   /* tengkorak + rahang */
-  hp(sph(0.225, 0.27, 0.245, d.skin), 0, 1.66, 0);
-  hp(sph(0.19, 0.17, 0.2, d.skin), 0, 1.55, 0.02);
+  hp(sph(0.225, 0.27, 0.215, d.skin), 0, 1.66, 0);
+  hp(sph(0.19, 0.17, 0.19, d.skin), 0, 1.55, 0.02);
   hp(sph(0.03, 0.05, 0.035, d.skin), 0, 1.62, 0.235); /* hidung */
   for (const sx of [-1, 1]) hp(sph(0.03, 0.06, 0.045, d.skin), 0.225 * sx, 1.64, 0); /* telinga */
   /* rambut */
@@ -180,7 +181,7 @@ export function buildChar(src) {
   /* topi */
   const ht = d.hatStyle, hc = d.hat || '#c9a227';
   const cyl = (rt, rb, h, c, y) => {
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 16), M(c));
+    const m = new THREE.Mesh(new THREE.BoxGeometry(Math.max(rt, rb) * 2, h, Math.max(rt, rb) * 2), M(c));
     m.position.set(0, y - HEADY, 0);
     m.castShadow = true;
     return m;

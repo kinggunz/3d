@@ -159,6 +159,7 @@ export const introMixin = {
     this.introScript();
     this.introPlanePose(0);
     I.snd.engine(1, false);
+    try { if (window.speechSynthesis) window.speechSynthesis.getVoices(); } catch (e) { /* abaikan */ }
     this.r.domElement.style.filter = '';
     I.camSkin = true;
     for (const [, r] of this.remotes) r.g.visible = false;
@@ -381,6 +382,7 @@ export const introMixin = {
     if (I.lastInside !== inside) { I.lastInside = inside; I.snd.rain(storm, inside); }
     if (I.rainOn) I.snd.rain(storm, inside);
 
+    I.snd.murmur(inside && t < T_STRIKE - 1 && !I.tts_busy);
     /* --- subtitle --- */
     this.introSubtitle(t, dt);
 
@@ -581,11 +583,32 @@ export const introMixin = {
     if (!L) { box.style.opacity = 0; I.line = null; return; }
     if (I.line !== L) { I.line = L; I.typeI = 0; I.typeAcc = 0; $('inWho').textContent = L[1] ? L[1] + ': ' : ''; $('inWho').style.color = L[1] === 'Kopilot Raka' ? '#7fd1ff' : L[1] === 'Kapten' ? '#ffd27f' : '#9dff9d'; $('inTxt').textContent = ''; }
     box.style.opacity = 1;
+    if (I.spoken !== L) { I.spoken = L; this.introSpeak(L); }
     I.typeAcc += dt * 34;
     const n = Math.min(L[2].length, Math.floor(I.typeAcc));
-    if (n !== I.typeI) { if (n % 3 === 0 && L[1]) I.snd.blip(L[4] || 0); I.typeI = n; $('inTxt').textContent = L[2].slice(0, n); }
+    if (n !== I.typeI) { if (n % 3 === 0 && L[1] && !I.tts) I.snd.blip(L[4] || 0); I.typeI = n; $('inTxt').textContent = L[2].slice(0, n); }
     const red = L[5] ? '#ff6a5a' : '#fff';
     $('inTxt').style.color = red;
+  },
+
+  /* suara orang berbicara (TTS bahasa Indonesia bila ada), tiap tokoh nada beda */
+  introSpeak(L) {
+    const I = this.intro;
+    const ss = typeof window !== 'undefined' && window.speechSynthesis;
+    if (!ss || !L[1] || typeof SpeechSynthesisUtterance === 'undefined') return;
+    try {
+      ss.cancel();
+      const u = new SpeechSynthesisUtterance(L[2]);
+      u.lang = 'id-ID';
+      const v = (ss.getVoices() || []).find((x) => /^id/i.test(x.lang));
+      if (v) u.voice = v;
+      const k = L[4];
+      u.pitch = k === 0 ? 0.8 : k === 4 ? 0.55 : k === 1 ? 1.1 : 1.4;
+      u.rate = clamp(L[2].length / (L[3] * 12.5), 0.95, 1.6) * (L[5] ? 1.08 : 1);
+      u.volume = 1;
+      ss.speak(u);
+      I.tts = true;
+    } catch (e) { I.tts = false; }
   },
 
   /* ================= BENTURAN ================= */
@@ -688,6 +711,7 @@ export const introMixin = {
     }
     I.ended = true;
     I.snd.stop();
+    try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) { /* abaikan */ }
     const p = this.p;
     p.yaw = I.woke ? I.toWreck : (I.toWreck ?? p.yaw);
     p.pitch = -0.05;
